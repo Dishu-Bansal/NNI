@@ -1,8 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-/// Static landing page shown after a successful login. Just a success
-/// message plus a side drawer with a Log Out button for now.
+import '../student_management/screens/student_list_screen.dart';
+
+/// Landing page shown after a successful login: a success message, a quick
+/// link to Student Management, and a side drawer with a Log Out button.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -48,6 +50,15 @@ class HomeScreen extends StatelessWidget {
             ),
             const Divider(),
             ListTile(
+              leading: const Icon(Icons.people_outline),
+              title: const Text('Student Management'),
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const StudentListScreen()),
+              ),
+            ),
+            const Divider(),
+            ListTile(
               leading: const Icon(Icons.logout),
               title: const Text('Log Out'),
               onTap: () => _logout(context),
@@ -74,6 +85,22 @@ class HomeScreen extends StatelessWidget {
                 'Welcome${user?.email != null ? ', ${user!.email}' : ''}',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const StudentListScreen()),
+                  ),
+                  icon: const Icon(Icons.people_outline),
+                  label: const Text('Student Management'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
               ),
             ],
           ),
