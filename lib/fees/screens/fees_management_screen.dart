@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../student_management/models/student_model.dart';
 import '../../student_management/services/firebase_student_service.dart';
+import '../../widgets/app_drawer.dart';
 import '../models/receipt_model.dart';
 import '../services/firebase_fees_service.dart';
 import 'receipt_form_screen.dart';
@@ -54,6 +56,7 @@ class _FeesManagementScreenState extends State<FeesManagementScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
+      drawer: appDrawer(context),
       appBar: AppBar(
         title: const Text('Fees Management',
             style: TextStyle(fontWeight: FontWeight.w700)),
@@ -99,7 +102,7 @@ class _FeesManagementScreenState extends State<FeesManagementScreen>
 
 // ── Students tab ─────────────────────────────────────────────────────────────
 
-class _StudentsTab extends StatelessWidget {
+class _StudentsTab extends StatefulWidget {
   final FirebaseStudentService studentService;
   final FirebaseFeesService feesService;
   final void Function(StudentModel) onOpen;
@@ -110,39 +113,57 @@ class _StudentsTab extends StatelessWidget {
     required this.onOpen,
   });
 
+  @override
+  State<_StudentsTab> createState() => _StudentsTabState();
+}
+
+class _StudentsTabState extends State<_StudentsTab> {
+  final _searchCtrl = TextEditingController();
+
+  /// null means "all".
+  String? _courseFilter;
+  String? _collegeFilter;
+  int? _yearFilter;
+  String? _statusFilter; // 'Pending' | 'Paid'
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _hasFilters =>
+      _searchCtrl.text.trim().isNotEmpty ||
+      _courseFilter != null ||
+      _collegeFilter != null ||
+      _yearFilter != null ||
+      _statusFilter != null;
+
+  void _clearFilters() {
+    setState(() {
+      _searchCtrl.clear();
+      _courseFilter = null;
+      _collegeFilter = null;
+      _yearFilter = null;
+      _statusFilter = null;
+    });
+  }
+
   String _money(double v) => '₹${v.toStringAsFixed(0)}';
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<StudentModel>>(
-      stream: studentService.watchAll(),
+      stream: widget.studentService.watchAll(),
       builder: (context, studentSnap) {
         if (studentSnap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
         final students = studentSnap.data ?? [];
-        // Current admission year at the top, descending.
-        final sorted = List<StudentModel>.from(students)
-          ..sort((a, b) {
-            final byYear = b.admissionYear.compareTo(a.admissionYear);
-            return byYear != 0
-                ? byYear
-                : a.name.toLowerCase().compareTo(b.name.toLowerCase());
-          });
-        if (sorted.isEmpty) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(32),
-              child: Text(
-                'No students yet.\nAdd students before recording receipts.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-          );
-        }
+        final years = students.map((s) => s.admissionYear).toSet().toList()
+          ..sort((a, b) => b.compareTo(a));
         return StreamBuilder<List<ReceiptModel>>(
-          stream: feesService.watchAllReceipts(),
+          stream: widget.feesService.watchAllReceipts(),
           builder: (context, receiptSnap) {
             final receipts = receiptSnap.data ?? [];
             final paidByStudent = <String, double>{};
@@ -150,113 +171,299 @@ class _StudentsTab extends StatelessWidget {
               paidByStudent[r.studentId] =
                   (paidByStudent[r.studentId] ?? 0) + r.amount;
             }
-            final isNarrow = MediaQuery.of(context).size.width < 600;
-            if (isNarrow) {
-              return ListView.separated(
-                padding: const EdgeInsets.all(12),
-                itemCount: sorted.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (_, i) => _StudentCard(
-                  student: sorted[i],
-                  paid: paidByStudent[sorted[i].id] ?? 0,
-                  onTap: () => onOpen(sorted[i]),
-                  money: _money,
-                ),
-              );
-            }
-            return Container(
-              margin: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(children: [
-                _header(),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: sorted.length,
-                    separatorBuilder: (_, _) =>
-                        Divider(height: 1, color: Colors.grey.shade100),
-                    itemBuilder: (_, i) {
-                      final s = sorted[i];
-                      final paid = paidByStudent[s.id] ?? 0;
-                      final pending =
-                          (s.totalFees - paid).clamp(0.0, double.infinity);
-                      return InkWell(
-                        onTap: () => onOpen(s),
-                        child: Container(
-                          color: i.isEven
-                              ? Colors.white
-                              : Colors.grey.shade50,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          child: Row(children: [
-                            Expanded(
-                              flex: 1,
-                              child: Text(
-                                s.rollNo.isEmpty ? '—' : s.rollNo,
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade800),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Expanded(
-                              flex: 3,
-                              child: Text(s.name,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14)),
-                            ),
-                            Expanded(
-                              flex: 1,
-                              child: Text('${s.admissionYear}',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey.shade800)),
-                            ),
-                            Expanded(
-                              flex: 1,
-                              child: Text(_money(s.totalFees),
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey.shade800)),
-                            ),
-                            Expanded(
-                              flex: 1,
-                              child: Text(_money(paid),
-                                  style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Color(0xFF2E7D32),
-                                      fontWeight: FontWeight.w600)),
-                            ),
-                            Expanded(
-                              flex: 1,
-                              child: Text(
-                                _money(pending),
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                    color: pending > 0
-                                        ? Colors.red.shade700
-                                        : const Color(0xFF2E7D32)),
-                              ),
-                            ),
-                          ]),
-                        ),
-                      );
-                    },
+
+            final q = _searchCtrl.text.trim().toLowerCase();
+            // Current admission year at the top, descending.
+            final filtered = students.where((s) {
+              if (q.isNotEmpty && !s.name.toLowerCase().contains(q)) {
+                return false;
+              }
+              if (_courseFilter != null && s.course != _courseFilter) {
+                return false;
+              }
+              if (_collegeFilter != null && s.college != _collegeFilter) {
+                return false;
+              }
+              if (_yearFilter != null && s.admissionYear != _yearFilter) {
+                return false;
+              }
+              if (_statusFilter != null) {
+                final pending = (s.totalFees - (paidByStudent[s.id] ?? 0))
+                    .clamp(0.0, double.infinity);
+                if (_statusFilter == 'Pending' && pending <= 0) return false;
+                if (_statusFilter == 'Paid' && pending > 0) return false;
+              }
+              return true;
+            }).toList()
+              ..sort((a, b) {
+                final byYear = b.admissionYear.compareTo(a.admissionYear);
+                return byYear != 0
+                    ? byYear
+                    : a.name.toLowerCase().compareTo(b.name.toLowerCase());
+              });
+
+            return Column(children: [
+              // Search bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'Search by name',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchCtrl.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: _clearFilters,
+                          )
+                        : null,
+                    isDense: true,
                   ),
                 ),
-              ]),
-            );
+              ),
+              // Filter chips — one row per group, left-aligned and
+              // horizontally scrollable.
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Column(children: [
+                  _chipRow('Course', [
+                    _chip('All', _courseFilter == null,
+                        () => setState(() => _courseFilter = null)),
+                    for (final c in StudentModel.courses)
+                      _chip(c, _courseFilter == c,
+                          () => setState(() => _courseFilter = c)),
+                  ]),
+                  _chipRow('College', [
+                    _chip('All', _collegeFilter == null,
+                        () => setState(() => _collegeFilter = null)),
+                    for (final c in StudentModel.colleges)
+                      _chip(c, _collegeFilter == c,
+                          () => setState(() => _collegeFilter = c)),
+                  ]),
+                  _chipRow('Year', [
+                    _chip('All', _yearFilter == null,
+                        () => setState(() => _yearFilter = null)),
+                    for (final y in years)
+                      _chip('$y', _yearFilter == y,
+                          () => setState(() => _yearFilter = y)),
+                  ]),
+                  _chipRow('Status', [
+                    _chip('All', _statusFilter == null,
+                        () => setState(() => _statusFilter = null)),
+                    _chip('Pending', _statusFilter == 'Pending',
+                        () => setState(() => _statusFilter = 'Pending')),
+                    _chip('Paid', _statusFilter == 'Paid',
+                        () => setState(() => _statusFilter = 'Paid')),
+                  ]),
+                ]),
+              ),
+              if (_hasFilters)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 12, top: 2),
+                    child: TextButton.icon(
+                      onPressed: _clearFilters,
+                      icon: const Icon(Icons.filter_alt_off, size: 16),
+                      label: const Text('Clear filters'),
+                    ),
+                  ),
+                ),
+              Expanded(
+                child: students.isEmpty
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32),
+                          child: Text(
+                            'No students yet.\nAdd students before recording receipts.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      )
+                    : filtered.isEmpty
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Text(
+                                'No students match your filters.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          )
+                        : MediaQuery.of(context).size.width < 600
+                            ? ListView.separated(
+                                padding: const EdgeInsets.all(12),
+                                itemCount: filtered.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 10),
+                                itemBuilder: (_, i) => _StudentCard(
+                                  student: filtered[i],
+                                  paid: paidByStudent[filtered[i].id] ?? 0,
+                                  onTap: () => widget.onOpen(filtered[i]),
+                                  money: _money,
+                                ),
+                              )
+                            : Container(
+                                margin: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border:
+                                      Border.all(color: Colors.grey.shade200),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: Column(children: [
+                                  _header(),
+                                  const Divider(height: 1),
+                                  Expanded(
+                                    child: ListView.separated(
+                                      itemCount: filtered.length,
+                                      separatorBuilder: (_, _) => Divider(
+                                          height: 1,
+                                          color: Colors.grey.shade100),
+                                      itemBuilder: (_, i) {
+                                        final s = filtered[i];
+                                        final paid =
+                                            paidByStudent[s.id] ?? 0;
+                                        final pending = (s.totalFees - paid)
+                                            .clamp(0.0, double.infinity);
+                                        return InkWell(
+                                          onTap: () => widget.onOpen(s),
+                                          child: Container(
+                                            color: i.isEven
+                                                ? Colors.white
+                                                : Colors.grey.shade50,
+                                            padding:
+                                                const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 10),
+                                            child: Row(children: [
+                                              Expanded(
+                                                flex: 1,
+                                                child: Text(
+                                                  s.rollNo.isEmpty
+                                                      ? '—'
+                                                      : s.rollNo,
+                                                  style: TextStyle(
+                                                      fontSize: 13,
+                                                      color: Colors
+                                                          .grey.shade800),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(s.name,
+                                                    overflow: TextOverflow
+                                                        .ellipsis,
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        fontSize: 14)),
+                                              ),
+                                              Expanded(
+                                                flex: 1,
+                                                child: Text(
+                                                    '${s.admissionYear}',
+                                                    style: TextStyle(
+                                                        fontSize: 13,
+                                                        color: Colors
+                                                            .grey.shade800)),
+                                              ),
+                                              Expanded(
+                                                flex: 1,
+                                                child: Text(_money(
+                                                    s.totalFees),
+                                                    style: TextStyle(
+                                                        fontSize: 13,
+                                                        color: Colors
+                                                            .grey.shade800)),
+                                              ),
+                                              Expanded(
+                                                flex: 1,
+                                                child: Text(_money(paid),
+                                                    style: const TextStyle(
+                                                        fontSize: 13,
+                                                        color: Color(
+                                                            0xFF2E7D32),
+                                                        fontWeight:
+                                                            FontWeight.w600)),
+                                              ),
+                                              Expanded(
+                                                flex: 1,
+                                                child: Text(
+                                                  _money(pending),
+                                                  style: TextStyle(
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: pending > 0
+                                                          ? Colors.red
+                                                              .shade700
+                                                          : const Color(
+                                                              0xFF2E7D32)),
+                                                ),
+                                              ),
+                                            ]),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ]),
+                              ),
+              ),
+            ]);
           },
         );
       },
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 14, right: 6),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey.shade600)),
+    );
+  }
+
+  Widget _chipRow(String label, List<Widget> chips) {
+    return SizedBox(
+      height: 40,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(children: [
+          _sectionLabel(label),
+          ...chips,
+        ]),
+      ),
+    );
+  }
+
+  Widget _chip(String label, bool selected, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: ChoiceChip(
+        label: Text(label, style: const TextStyle(fontSize: 12)),
+        selected: selected,
+        onSelected: (_) => onTap(),
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        selectedColor: const Color(0xFF1A3C6E).withValues(alpha: 0.15),
+        labelStyle: TextStyle(
+          color: selected ? const Color(0xFF1A3C6E) : Colors.grey.shade700,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
     );
   }
 
@@ -364,6 +571,19 @@ class _ReceiptsTab extends StatelessWidget {
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}  '
       '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
+  Future<void> _openPhoto(BuildContext context, String url) async {
+    try {
+      await launchUrl(Uri.parse(url),
+          mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open photo: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<ReceiptModel>>(
@@ -401,14 +621,18 @@ class _ReceiptsTab extends StatelessWidget {
               ),
               child: Row(children: [
                 if (r.photoUrl.isNotEmpty)
-                  ClipRRect(
+                  InkWell(
+                    onTap: () => _openPhoto(context, r.photoUrl),
                     borderRadius: BorderRadius.circular(6),
-                    child: Image.network(
-                      r.photoUrl,
-                      width: 44,
-                      height: 44,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.network(
+                        r.photoUrl,
+                        width: 44,
+                        height: 44,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                      ),
                     ),
                   )
                 else

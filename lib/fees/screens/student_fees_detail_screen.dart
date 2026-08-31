@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../student_management/models/student_model.dart';
 import '../models/receipt_model.dart';
@@ -92,55 +93,79 @@ class StudentFeesDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // Original fees
-              _sectionTitle('Original Fees (at creation)'),
+              // Original vs pending — one row per fee type.
+              _sectionTitle('Original vs Pending'),
               _card(
-                child: student.originalFees.isEmpty
-                    ? Text('No fees were set at creation.',
+                child: student.fees.isEmpty && student.originalFees.isEmpty
+                    ? Text('No fees were set for this student.',
                         style: TextStyle(
                             fontSize: 12, color: Colors.grey.shade500))
                     : Column(children: [
-                        for (final f in student.originalFees)
+                        // Fee types: current fees first, then any types that
+                        // only existed at creation.
+                        for (final t in _feeTypes())
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 3),
                             child: Row(children: [
                               Expanded(
-                                  child: Text(f.type,
+                                  child: Text(t,
                                       style: const TextStyle(fontSize: 13))),
-                              Text(_money(f.amount),
-                                  style: const TextStyle(
+                              Text(_money(_originalFor(t)),
+                                  style: TextStyle(
                                       fontSize: 13,
-                                      fontWeight: FontWeight.w600)),
+                                      color: Colors.grey.shade600)),
+                              const SizedBox(width: 18),
+                              SizedBox(
+                                width: 70,
+                                child: Text(
+                                  _money(pending[t] ?? 0),
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: (pending[t] ?? 0) > 0
+                                          ? Colors.red.shade700
+                                          : const Color(0xFF2E7D32)),
+                                ),
+                              ),
                             ]),
                           ),
-                      ]),
-              ),
-              const SizedBox(height: 12),
-
-              // Current pending per type
-              _sectionTitle('Current Pending'),
-              _card(
-                child: student.fees.isEmpty
-                    ? Text('No fee entries.',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade500))
-                    : Column(children: [
-                        for (final f in student.fees)
-                          _pendingRow(f, pending[f.type] ?? 0),
                         const Divider(height: 12),
                         Row(children: [
                           const Expanded(
-                              child: Text('Total pending',
+                              child: Text('Total',
                                   style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700))),
-                          Text(_money(pendingTotal),
+                          Text(_money(student.totalFees),
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700)),
+                          const SizedBox(width: 18),
+                          SizedBox(
+                            width: 70,
+                            child: Text(
+                              _money(pendingTotal),
+                              textAlign: TextAlign.right,
                               style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w800,
                                   color: pendingTotal > 0
                                       ? Colors.red.shade700
-                                      : const Color(0xFF2E7D32))),
+                                      : const Color(0xFF2E7D32)),
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 4),
+                        Row(children: [
+                          const Expanded(
+                              child: Text('Original (at creation)',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey))),
+                          const Text('Pending',
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.grey)),
                         ]),
                       ]),
               ),
@@ -213,16 +238,26 @@ class StudentFeesDetailScreen extends StatelessWidget {
                             ],
                             if (r.photoUrl.isNotEmpty) ...[
                               const SizedBox(height: 8),
-                              ClipRRect(
+                              InkWell(
+                                onTap: () => _openPhoto(context, r.photoUrl),
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  r.photoUrl,
-                                  height: 120,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) =>
-                                      const SizedBox.shrink(),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    r.photoUrl,
+                                    height: 120,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) =>
+                                        const SizedBox.shrink(),
+                                  ),
                                 ),
                               ),
+                              const SizedBox(height: 4),
+                              const Text('Tap photo to open it',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey,
+                                      fontStyle: FontStyle.italic)),
                             ],
                           ]),
                     ),
@@ -271,20 +306,36 @@ class StudentFeesDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _pendingRow(FeeEntry f, double pending) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(children: [
-        Expanded(
-            child: Text(f.type, style: const TextStyle(fontSize: 13))),
-        Text(_money(pending),
-            style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: pending > 0
-                    ? Colors.red.shade700
-                    : const Color(0xFF2E7D32))),
-      ]),
-    );
+  /// Fee types to show: current fees first, then any types that only
+  /// existed in the creation snapshot.
+  List<String> _feeTypes() {
+    final types = <String>[];
+    for (final f in student.fees) {
+      if (!types.contains(f.type)) types.add(f.type);
+    }
+    for (final f in student.originalFees) {
+      if (!types.contains(f.type)) types.add(f.type);
+    }
+    return types;
+  }
+
+  double _originalFor(String type) {
+    for (final f in student.originalFees) {
+      if (f.type == type) return f.amount;
+    }
+    return 0;
+  }
+
+  Future<void> _openPhoto(BuildContext context, String url) async {
+    try {
+      await launchUrl(Uri.parse(url),
+          mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open photo: $e')),
+        );
+      }
+    }
   }
 }

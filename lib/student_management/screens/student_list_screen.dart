@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/app_drawer.dart';
 import '../../widgets/pagination_bar.dart';
 import '../models/student_model.dart';
 import '../services/firebase_student_service.dart';
@@ -79,6 +80,7 @@ class _StudentListScreenState extends State<StudentListScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
+      drawer: appDrawer(context),
       appBar: AppBar(
         title: const Text('Student Management',
             style: TextStyle(fontWeight: FontWeight.w700)),

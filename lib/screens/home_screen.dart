@@ -3,78 +3,19 @@ import 'package:flutter/material.dart';
 
 import '../fees/screens/fees_management_screen.dart';
 import '../student_management/screens/student_list_screen.dart';
+import '../widgets/app_drawer.dart';
 
-/// Landing page shown after a successful login: a success message, a quick
-/// link to Student Management, and a side drawer with a Log Out button.
+/// Landing page shown after a successful login: a success message, quick
+/// links to the management screens, and a side drawer with a Log Out button.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  Future<void> _logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    // authStateChanges in main.dart routes back to the login screen.
-  }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     return Scaffold(
       appBar: AppBar(title: const Text('NNI')),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  const Icon(Icons.local_hospital_outlined,
-                      color: Colors.white, size: 34),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'National Nursing Institute',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700),
-                  ),
-                  Text(
-                    user?.email ?? '',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.people_outline),
-              title: const Text('Student Management'),
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const StudentListScreen()),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.receipt_long_outlined),
-              title: const Text('Fees Management'),
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const FeesManagementScreen()),
-              ),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Log Out'),
-              onTap: () => _logout(context),
-            ),
-          ],
-        ),
-      ),
+      drawer: appDrawer(context),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
