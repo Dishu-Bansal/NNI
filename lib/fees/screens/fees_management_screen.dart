@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../student_management/models/student_model.dart';
 import '../../student_management/services/firebase_student_service.dart';
 import '../../widgets/app_drawer.dart';
+import '../../widgets/pagination_bar.dart';
 import '../models/receipt_model.dart';
 import '../services/firebase_fees_service.dart';
 import 'receipt_form_screen.dart';
@@ -118,6 +119,8 @@ class _StudentsTab extends StatefulWidget {
 }
 
 class _StudentsTabState extends State<_StudentsTab> {
+  static const _pageSize = 10;
+
   final _searchCtrl = TextEditingController();
 
   /// null means "all".
@@ -125,6 +128,8 @@ class _StudentsTabState extends State<_StudentsTab> {
   String? _collegeFilter;
   int? _yearFilter;
   String? _statusFilter; // 'Pending' | 'Paid'
+
+  int _page = 1;
 
   @override
   void dispose() {
@@ -146,6 +151,7 @@ class _StudentsTabState extends State<_StudentsTab> {
       _collegeFilter = null;
       _yearFilter = null;
       _statusFilter = null;
+      _page = 1;
     });
   }
 
@@ -202,13 +208,23 @@ class _StudentsTabState extends State<_StudentsTab> {
                     : a.name.toLowerCase().compareTo(b.name.toLowerCase());
               });
 
+            // Pagination over the filtered set.
+            final totalPages =
+                filtered.isEmpty ? 1 : (filtered.length / _pageSize).ceil();
+            final page = _page < 1 ? 1 : (_page > totalPages ? totalPages : _page);
+            final start = (page - 1) * _pageSize;
+            final slice = filtered.isEmpty
+                ? const <StudentModel>[]
+                : filtered.sublist(
+                    start, (start + _pageSize).clamp(0, filtered.length));
+
             return Column(children: [
               // Search bar
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
                 child: TextField(
                   controller: _searchCtrl,
-                  onChanged: (_) => setState(() {}),
+                  onChanged: (_) => setState(() => _page = 1),
                   decoration: InputDecoration(
                     hintText: 'Search by name',
                     prefixIcon: const Icon(Icons.search),
@@ -229,32 +245,56 @@ class _StudentsTabState extends State<_StudentsTab> {
                 child: Column(children: [
                   _chipRow('Course', [
                     _chip('All', _courseFilter == null,
-                        () => setState(() => _courseFilter = null)),
+                        () => setState(() {
+                              _courseFilter = null;
+                              _page = 1;
+                            })),
                     for (final c in StudentModel.courses)
-                      _chip(c, _courseFilter == c,
-                          () => setState(() => _courseFilter = c)),
+                      _chip(c, _courseFilter == c, () => setState(() {
+                            _courseFilter = c;
+                            _page = 1;
+                          })),
                   ]),
                   _chipRow('College', [
                     _chip('All', _collegeFilter == null,
-                        () => setState(() => _collegeFilter = null)),
+                        () => setState(() {
+                              _collegeFilter = null;
+                              _page = 1;
+                            })),
                     for (final c in StudentModel.colleges)
-                      _chip(c, _collegeFilter == c,
-                          () => setState(() => _collegeFilter = c)),
+                      _chip(c, _collegeFilter == c, () => setState(() {
+                            _collegeFilter = c;
+                            _page = 1;
+                          })),
                   ]),
                   _chipRow('Year', [
                     _chip('All', _yearFilter == null,
-                        () => setState(() => _yearFilter = null)),
+                        () => setState(() {
+                              _yearFilter = null;
+                              _page = 1;
+                            })),
                     for (final y in years)
-                      _chip('$y', _yearFilter == y,
-                          () => setState(() => _yearFilter = y)),
+                      _chip('$y', _yearFilter == y, () => setState(() {
+                            _yearFilter = y;
+                            _page = 1;
+                          })),
                   ]),
                   _chipRow('Status', [
                     _chip('All', _statusFilter == null,
-                        () => setState(() => _statusFilter = null)),
+                        () => setState(() {
+                              _statusFilter = null;
+                              _page = 1;
+                            })),
                     _chip('Pending', _statusFilter == 'Pending',
-                        () => setState(() => _statusFilter = 'Pending')),
+                        () => setState(() {
+                              _statusFilter = 'Pending';
+                              _page = 1;
+                            })),
                     _chip('Paid', _statusFilter == 'Paid',
-                        () => setState(() => _statusFilter = 'Paid')),
+                        () => setState(() {
+                              _statusFilter = 'Paid';
+                              _page = 1;
+                            })),
                   ]),
                 ]),
               ),
@@ -296,13 +336,13 @@ class _StudentsTabState extends State<_StudentsTab> {
                         : MediaQuery.of(context).size.width < 600
                             ? ListView.separated(
                                 padding: const EdgeInsets.all(12),
-                                itemCount: filtered.length,
+                                itemCount: slice.length,
                                 separatorBuilder: (_, _) =>
                                     const SizedBox(height: 10),
                                 itemBuilder: (_, i) => _StudentCard(
-                                  student: filtered[i],
-                                  paid: paidByStudent[filtered[i].id] ?? 0,
-                                  onTap: () => widget.onOpen(filtered[i]),
+                                  student: slice[i],
+                                  paid: paidByStudent[slice[i].id] ?? 0,
+                                  onTap: () => widget.onOpen(slice[i]),
                                   money: _money,
                                 ),
                               )
@@ -320,12 +360,12 @@ class _StudentsTabState extends State<_StudentsTab> {
                                   const Divider(height: 1),
                                   Expanded(
                                     child: ListView.separated(
-                                      itemCount: filtered.length,
+                                      itemCount: slice.length,
                                       separatorBuilder: (_, _) => Divider(
                                           height: 1,
                                           color: Colors.grey.shade100),
                                       itemBuilder: (_, i) {
-                                        final s = filtered[i];
+                                        final s = slice[i];
                                         final paid =
                                             paidByStudent[s.id] ?? 0;
                                         final pending = (s.totalFees - paid)
@@ -417,6 +457,14 @@ class _StudentsTabState extends State<_StudentsTab> {
                                 ]),
                               ),
               ),
+              if (students.isNotEmpty)
+                PaginationBar(
+                  currentPage: page,
+                  totalPages: totalPages,
+                  totalCount: filtered.length,
+                  pageSize: _pageSize,
+                  onPageChanged: (p) => setState(() => _page = p),
+                ),
             ]);
           },
         );
@@ -628,17 +676,24 @@ class _ReceiptsTab extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                       child: Image.network(
                         r.photoUrl,
-                        width: 44,
-                        height: 44,
+                        width: 52,
+                        height: 52,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                        errorBuilder: (_, _, _) => Container(
+                          width: 52,
+                          height: 52,
+                          color: Colors.grey.shade200,
+                          alignment: Alignment.center,
+                          child: Icon(Icons.image_not_supported_outlined,
+                              size: 20, color: Colors.grey.shade500),
+                        ),
                       ),
                     ),
                   )
                 else
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 52,
+                    height: 52,
                     decoration: BoxDecoration(
                       color: const Color(0xFF1A3C6E)
                           .withValues(alpha: 0.08),

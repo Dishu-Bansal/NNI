@@ -247,8 +247,15 @@ class StudentFeesDetailScreen extends StatelessWidget {
                                     r.photoUrl,
                                     height: 120,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) =>
-                                        const SizedBox.shrink(),
+                                    errorBuilder: (_, _, _) => Container(
+                                      height: 120,
+                                      width: double.infinity,
+                                      color: Colors.grey.shade200,
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                          Icons.image_not_supported_outlined,
+                                          color: Colors.grey.shade500),
+                                    ),
                                   ),
                                 ),
                               ),
