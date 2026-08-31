@@ -1,1 +1,24 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"national-nursing-institute","configurations":{"web":"1:129399813470:web:7ee5ce1b2f0a3131e40bcf"}}}}}}
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "national-nursing-institute",
+          "configurations": {
+            "web": "1:129399813470:web:7ee5ce1b2f0a3131e40bcf"
+          }
+        }
+      }
+    }
+  }
+}
