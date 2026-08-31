@@ -255,14 +255,12 @@ class _StudentsTabState extends State<_StudentsTab> {
               ),
             ),
           ),
-          // Filter chips — one left-aligned, horizontally scrollable row
-          SizedBox(
-            height: 44,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(children: [
-                _sectionLabel('Course'),
+          // Filter chips — one row per group, left-aligned and each
+          // horizontally scrollable when the options are many.
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Column(children: [
+              _chipRow('Course', [
                 _chip('All', _courseFilter == null,
                     () => setState(() {
                           _courseFilter = null;
@@ -273,7 +271,8 @@ class _StudentsTabState extends State<_StudentsTab> {
                         _courseFilter = c;
                         _page = 1;
                       })),
-                _sectionLabel('College'),
+              ]),
+              _chipRow('College', [
                 _chip('All', _collegeFilter == null,
                     () => setState(() {
                           _collegeFilter = null;
@@ -284,7 +283,8 @@ class _StudentsTabState extends State<_StudentsTab> {
                         _collegeFilter = c;
                         _page = 1;
                       })),
-                _sectionLabel('Year'),
+              ]),
+              _chipRow('Year', [
                 _chip('All', _yearFilter == null, () => setState(() {
                       _yearFilter = null;
                       _page = 1;
@@ -295,7 +295,7 @@ class _StudentsTabState extends State<_StudentsTab> {
                         _page = 1;
                       })),
               ]),
-            ),
+            ]),
           ),
           if (_hasFilters)
             Align(
@@ -379,6 +379,22 @@ class _StudentsTabState extends State<_StudentsTab> {
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: Colors.grey.shade600)),
+    );
+  }
+
+  /// One left-aligned chip group: label + chips in a single horizontally
+  /// scrollable row (chips flow off-screen instead of wrapping).
+  Widget _chipRow(String label, List<Widget> chips) {
+    return SizedBox(
+      height: 40,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(children: [
+          _sectionLabel(label),
+          ...chips,
+        ]),
+      ),
     );
   }
 
