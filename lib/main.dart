@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/verify_email_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,12 +32,7 @@ class NniApp extends StatelessWidget {
             );
           }
           final user = snap.data;
-          if (user == null) return const LoginScreen();
-          // A signed-in user must verify their email before entering.
-          if (!user.emailVerified) {
-            return VerifyEmailScreen(email: user.email ?? '');
-          }
-          return const HomeScreen();
+          return user == null ? const LoginScreen() : const HomeScreen();
         },
       ),
     );

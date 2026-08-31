@@ -1,8 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/friendly_auth_error.dart';
-import 'forgot_password_screen.dart';
-import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -121,18 +119,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ForgotPasswordScreen()),
-                      ),
-                      child: const Text('Forgot password?'),
-                    ),
-                  ),
                   const SizedBox(height: 8),
                   SizedBox(
                     height: 50,
@@ -149,23 +135,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600)),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("Don't have an account?",
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.grey.shade600)),
-                      TextButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const RegisterScreen()),
-                        ),
-                        child: const Text('Register'),
-                      ),
-                    ],
                   ),
                 ],
               ),
