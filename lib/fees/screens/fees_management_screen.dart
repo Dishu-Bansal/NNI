@@ -218,7 +218,17 @@ class _StudentsTabState extends State<_StudentsTab> {
                 : filtered.sublist(
                     start, (start + _pageSize).clamp(0, filtered.length));
 
-            return Column(children: [
+            // Total pending across the filtered set (reflects the filters).
+            final totalPending = filtered.fold(
+                0.0,
+                (sum, s) =>
+                    sum +
+                    (s.totalFees - (paidByStudent[s.id] ?? 0))
+                        .clamp(0.0, double.infinity));
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               // Search bar
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -242,7 +252,9 @@ class _StudentsTabState extends State<_StudentsTab> {
               // horizontally scrollable.
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Column(children: [
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                   _chipRow('Course', [
                     _chip('All', _courseFilter == null,
                         () => setState(() {
@@ -310,6 +322,46 @@ class _StudentsTabState extends State<_StudentsTab> {
                     ),
                   ),
                 ),
+              // Total pending summary — reflects the active filters.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A3C6E).withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color:
+                            const Color(0xFF1A3C6E).withValues(alpha: 0.2)),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.payments_outlined,
+                        size: 18, color: Color(0xFF1A3C6E)),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Total Pending Fees'
+                      '${filtered.isNotEmpty ? '  •  ${filtered.length} ${filtered.length == 1 ? 'student' : 'students'}' : ''}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: Color(0xFF1A3C6E)),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '₹${totalPending.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: totalPending > 0
+                            ? Colors.red.shade700
+                            : const Color(0xFF2E7D32),
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
               Expanded(
                 child: students.isEmpty
                     ? const Center(
