@@ -29,7 +29,7 @@ jobs:
         run: flutter build web
 
       - name: Deploy to Firebase Hosting
-        uses: w9jds/firebase-action@v13
+        uses: w9jds/firebase-action@v15.28.2
         with:
           args: deploy --only hosting --project national-nursing-institute
         env:
