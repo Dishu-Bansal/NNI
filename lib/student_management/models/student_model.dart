@@ -27,6 +27,7 @@ class FeeEntry {
 class StudentModel {
   String? id;
   String name;
+  String rollNo;
   String course; // 'GNM' | 'ANM'
   String college; // 'Bahadurgarh' | 'Hisar'
   int admissionYear;
@@ -37,6 +38,10 @@ class StudentModel {
   String? createdBy;
   String? lastUpdatedBy;
 
+  /// Snapshot of the fees at the time the student was created, used to show
+  /// "original fees" in the fees detail.
+  List<FeeEntry> originalFees;
+
   static const List<String> courses = ['GNM', 'ANM'];
   static const List<String> colleges = ['Bahadurgarh', 'Hisar'];
 
@@ -46,11 +51,13 @@ class StudentModel {
   StudentModel({
     this.id,
     this.name = '',
+    this.rollNo = '',
     this.course = 'GNM',
     this.college = 'Bahadurgarh',
     this.admissionYear = 0,
     this.photoUrl = '',
     this.fees = const [],
+    this.originalFees = const [],
     this.createdAt,
     this.updatedAt,
     this.createdBy,
@@ -65,15 +72,16 @@ class StudentModel {
       StudentModel(
         id: id,
         name: d['name'] ?? '',
+        rollNo: d['rollNo'] ?? '',
         course: d['course'] ?? 'GNM',
         college: d['college'] ?? '',
         admissionYear: (d['admissionYear'] as num?)?.toInt() ??
             DateTime.now().year,
         photoUrl: d['photoUrl'] ?? '',
-        fees: (d['fees'] as List<dynamic>? ?? [])
-            .map((e) => FeeEntry.fromMap(
-                (e as Map).cast<String, dynamic>()))
-            .toList(),
+        fees: _parseFees(d['fees']),
+        originalFees: d['originalFees'] != null
+            ? _parseFees(d['originalFees'])
+            : _parseFees(d['fees']),
         createdAt: d['createdAt'] != null
             ? DateTime.tryParse(d['createdAt'])
             : null,
@@ -84,13 +92,23 @@ class StudentModel {
         lastUpdatedBy: d['lastUpdatedBy'] ?? '',
       );
 
+  static List<FeeEntry> _parseFees(dynamic raw) {
+    if (raw == null) return [];
+    final list = raw as List<dynamic>? ?? [];
+    return list
+        .map((e) => FeeEntry.fromMap((e as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
   Map<String, dynamic> toFirestore() => {
     'name': name,
+    'rollNo': rollNo,
     'course': course,
     'college': college,
     'admissionYear': admissionYear,
     'photoUrl': photoUrl,
     'fees': fees.map((f) => f.toMap()).toList(),
+    'originalFees': originalFees.map((f) => f.toMap()).toList(),
     'createdAt': createdAt?.toIso8601String(),
     'updatedAt': updatedAt?.toIso8601String(),
     'createdBy': createdBy ?? '',

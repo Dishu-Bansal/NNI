@@ -235,7 +235,9 @@ class _StudentsTabState extends State<_StudentsTab> {
             : filtered.sublist(
                 start, (start + _pageSize).clamp(0, filtered.length));
 
-        return Column(children: [
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           // Search bar
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -259,7 +261,9 @@ class _StudentsTabState extends State<_StudentsTab> {
           // horizontally scrollable when the options are many.
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Column(children: [
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               _chipRow('Course', [
                 _chip('All', _courseFilter == null,
                     () => setState(() {
@@ -492,6 +496,14 @@ class _TableHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(children: [
         _HeaderCell('Name', 4, 0, sortColumnIndex, sortAscending, onSort),
+        const Expanded(
+          flex: 1,
+          child: Text('Roll No',
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A3C6E),
+                  fontSize: 13)),
+        ),
         _HeaderCell('Course', 2, 1, sortColumnIndex, sortAscending, onSort),
         _HeaderCell('College', 2, 2, sortColumnIndex, sortAscending, onSort),
         _HeaderCell('Adm. Year', 1, 3, sortColumnIndex, sortAscending, onSort),
@@ -595,6 +607,14 @@ class _TableRow extends StatelessWidget {
                       fontWeight: FontWeight.w700, fontSize: 14)),
             ),
           ]),
+        ),
+        Expanded(
+          flex: 1,
+          child: Text(
+            student.rollNo.isEmpty ? '—' : student.rollNo,
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         Expanded(
           flex: 2,
@@ -716,6 +736,7 @@ class _StudentCard extends StatelessWidget {
                   ]),
                   const SizedBox(height: 3),
                   Text(
+                    '${student.rollNo.isNotEmpty ? 'Roll ${student.rollNo}  •  ' : ''}'
                     'Admitted ${student.admissionYear}'
                     '${fees > 0 ? '  •  ${student.fees.length} fee '
                         '${student.fees.length == 1 ? 'entry' : 'entries'}'

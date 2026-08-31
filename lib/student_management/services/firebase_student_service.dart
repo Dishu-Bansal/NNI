@@ -38,6 +38,8 @@ class FirebaseStudentService implements StudentRepository {
     student.updatedAt = now;
     student.createdBy = _currentUser;
     student.lastUpdatedBy = _currentUser;
+    // Snapshot the fees as the "original fees" for the fees module.
+    student.originalFees = List.of(student.fees);
     final ref =
         await _db.collection(_collection).add(student.toFirestore());
     await _writeLog(

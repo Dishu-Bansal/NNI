@@ -42,6 +42,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   final _service = FirebaseStudentService();
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
+  final _rollNoCtrl = TextEditingController();
 
   String _course = 'GNM';
   String _college = 'Bahadurgarh';
@@ -61,6 +62,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
     _admissionYear = existing?.admissionYear ?? DateTime.now().year;
     if (existing != null) {
       _nameCtrl.text = existing.name;
+      _rollNoCtrl.text = existing.rollNo;
       _course = existing.course;
       _college = existing.college;
       _photoUrl = existing.photoUrl;
@@ -107,6 +109,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _rollNoCtrl.dispose();
     for (final r in _rows) {
       r.dispose();
     }
@@ -168,6 +171,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
     final student = StudentModel(
       id: widget.existing?.id,
       name: _nameCtrl.text.trim(),
+      rollNo: _rollNoCtrl.text.trim(),
       course: _course,
       college: _college,
       admissionYear: _admissionYear,
@@ -231,6 +235,16 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Name *',
                   prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _rollNoCtrl,
+                textCapitalization: TextCapitalization.characters,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Roll No. (optional)',
+                  prefixIcon: Icon(Icons.numbers),
                 ),
               ),
               const SizedBox(height: 16),

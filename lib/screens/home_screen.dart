@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../fees/screens/fees_management_screen.dart';
 import '../student_management/screens/student_list_screen.dart';
 
 /// Landing page shown after a successful login: a success message, a quick
@@ -57,6 +58,14 @@ class HomeScreen extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const StudentListScreen()),
               ),
             ),
+            ListTile(
+              leading: const Icon(Icons.receipt_long_outlined),
+              title: const Text('Fees Management'),
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const FeesManagementScreen()),
+              ),
+            ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout),
@@ -97,6 +106,22 @@ class HomeScreen extends StatelessWidget {
                   ),
                   icon: const Icon(Icons.people_outline),
                   label: const Text('Student Management'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const FeesManagementScreen()),
+                  ),
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  label: const Text('Fees Management'),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
