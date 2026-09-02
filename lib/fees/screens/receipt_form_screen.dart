@@ -23,7 +23,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
   List<StudentModel> _students = [];
   bool _studentsLoaded = false;
 
-  String _college = 'Bahadurgarh';
+  String _college = 'Mahendargarh';
   String _course = 'GNM';
   late int _year;
   StudentModel? _selectedStudent;
