@@ -45,7 +45,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   final _rollNoCtrl = TextEditingController();
 
   String _course = 'GNM';
-  String _college = 'Bahadurgarh';
+  String _college = 'Mahendargarh';
   late int _admissionYear;
 
   // Photo state: a freshly picked image wins over the stored URL.

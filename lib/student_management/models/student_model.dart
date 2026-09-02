@@ -29,7 +29,7 @@ class StudentModel {
   String name;
   String rollNo;
   String course; // 'GNM' | 'ANM'
-  String college; // 'Bahadurgarh' | 'Hisar'
+  String college; // 'Mahendargarh' | 'Hisar'
   int admissionYear;
   String photoUrl;
   List<FeeEntry> fees;
@@ -43,7 +43,7 @@ class StudentModel {
   List<FeeEntry> originalFees;
 
   static const List<String> courses = ['GNM', 'ANM'];
-  static const List<String> colleges = ['Bahadurgarh', 'Hisar'];
+  static const List<String> colleges = ['Mahendargarh', 'Hisar'];
 
   /// Year-fee count per course: GNM covers Years 1-3, ANM Years 1-2.
   static int yearFeeCount(String course) => course == 'GNM' ? 3 : 2;
@@ -53,7 +53,7 @@ class StudentModel {
     this.name = '',
     this.rollNo = '',
     this.course = 'GNM',
-    this.college = 'Bahadurgarh',
+    this.college = 'Mahendargarh',
     this.admissionYear = 0,
     this.photoUrl = '',
     this.fees = const [],
