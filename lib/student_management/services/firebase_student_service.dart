@@ -132,6 +132,19 @@ class FirebaseStudentService implements StudentRepository {
     if (old.photoUrl != updated.photoUrl) {
       parts.add('Photo ${old.photoUrl.isEmpty ? 'added' : 'changed'}');
     }
+    diff('HNMC No.', old.hnmcNo, updated.hnmcNo);
+    diff('Registration No.', old.registrationNo, updated.registrationNo);
+    diff("Mother's name", old.mothersName, updated.mothersName);
+    diff("Father's name", old.fathersName, updated.fathersName);
+    diff('Address', old.address, updated.address);
+    if (old.dateOfBirth?.toIso8601String() !=
+        updated.dateOfBirth?.toIso8601String()) {
+      parts.add('DOB: ${_fmtDate(old.dateOfBirth)} → '
+          '${_fmtDate(updated.dateOfBirth)}');
+    }
+    diff('Family ID', old.familyId, updated.familyId);
+    diff('Aadhar No.', old.aadharNo, updated.aadharNo);
+    diff('Bank Account No.', old.bankAccountNo, updated.bankAccountNo);
 
     final oldFees = old.fees.map((f) => '${f.type}:${f.amount}').toList()
       ..sort();
@@ -146,6 +159,11 @@ class FirebaseStudentService implements StudentRepository {
     if (parts.isEmpty) return 'Updated ${updated.name}';
     return 'Updated: ${updated.name} — ${parts.join('; ')}';
   }
+
+  static String _fmtDate(DateTime? d) => d == null
+      ? '—'
+      : '${d.day.toString().padLeft(2, '0')}/'
+          '${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   // ── Photo upload ───────────────────────────────────────────────────────
 

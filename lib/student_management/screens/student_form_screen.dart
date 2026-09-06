@@ -43,10 +43,20 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _rollNoCtrl = TextEditingController();
+  final _hnmcNoCtrl = TextEditingController();
+  final _registrationNoCtrl = TextEditingController();
+  final _mothersNameCtrl = TextEditingController();
+  final _fathersNameCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
+  final _dobCtrl = TextEditingController();
+  final _familyIdCtrl = TextEditingController();
+  final _aadharNoCtrl = TextEditingController();
+  final _bankAccountNoCtrl = TextEditingController();
 
   String _course = 'GNM';
   String _college = 'Mahendargarh';
   late int _admissionYear;
+  DateTime? _dateOfBirth;
 
   // Photo state: a freshly picked image wins over the stored URL.
   Uint8List? _photoBytes;
@@ -66,6 +76,16 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
       _course = existing.course;
       _college = existing.college;
       _photoUrl = existing.photoUrl;
+      _hnmcNoCtrl.text = existing.hnmcNo;
+      _registrationNoCtrl.text = existing.registrationNo;
+      _mothersNameCtrl.text = existing.mothersName;
+      _fathersNameCtrl.text = existing.fathersName;
+      _addressCtrl.text = existing.address;
+      _dateOfBirth = existing.dateOfBirth;
+      _dobCtrl.text = _fmtDob(existing.dateOfBirth);
+      _familyIdCtrl.text = existing.familyId;
+      _aadharNoCtrl.text = existing.aadharNo;
+      _bankAccountNoCtrl.text = existing.bankAccountNo;
       _initRowsFrom(existing);
     } else {
       _initDefaultRows();
@@ -106,10 +126,42 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   String _fmtAmount(double a) =>
       a == a.roundToDouble() ? a.toStringAsFixed(0) : a.toString();
 
+  /// Date of birth shown as dd/mm/yyyy (empty when unset).
+  String _fmtDob(DateTime? d) => d == null
+      ? ''
+      : '${d.day.toString().padLeft(2, '0')}/'
+          '${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  Future<void> _pickDob() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dateOfBirth ??
+          DateTime(now.year - 18, now.month, now.day < 28 ? now.day : 28),
+      firstDate: DateTime(1950),
+      lastDate: now,
+      helpText: 'Select date of birth',
+    );
+    if (picked == null) return;
+    setState(() {
+      _dateOfBirth = picked;
+      _dobCtrl.text = _fmtDob(picked);
+    });
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
     _rollNoCtrl.dispose();
+    _hnmcNoCtrl.dispose();
+    _registrationNoCtrl.dispose();
+    _mothersNameCtrl.dispose();
+    _fathersNameCtrl.dispose();
+    _addressCtrl.dispose();
+    _dobCtrl.dispose();
+    _familyIdCtrl.dispose();
+    _aadharNoCtrl.dispose();
+    _bankAccountNoCtrl.dispose();
     for (final r in _rows) {
       r.dispose();
     }
@@ -177,6 +229,15 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
       admissionYear: _admissionYear,
       photoUrl: _photoUrl,
       fees: fees,
+      hnmcNo: _hnmcNoCtrl.text.trim(),
+      registrationNo: _registrationNoCtrl.text.trim(),
+      mothersName: _mothersNameCtrl.text.trim(),
+      fathersName: _fathersNameCtrl.text.trim(),
+      address: _addressCtrl.text.trim(),
+      dateOfBirth: _dateOfBirth,
+      familyId: _familyIdCtrl.text.trim(),
+      aadharNo: _aadharNoCtrl.text.trim(),
+      bankAccountNo: _bankAccountNoCtrl.text.trim(),
     );
 
     setState(() => _saving = true);
@@ -246,6 +307,74 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                   labelText: 'Roll No. (optional)',
                   prefixIcon: Icon(Icons.numbers),
                 ),
+              ),
+              const SizedBox(height: 16),
+              _profileTextField(
+                controller: _hnmcNoCtrl,
+                label: 'HNMC No.',
+                icon: Icons.numbers,
+              ),
+              const SizedBox(height: 12),
+              _profileTextField(
+                controller: _registrationNoCtrl,
+                label: 'Registration No.',
+                icon: Icons.confirmation_number_outlined,
+              ),
+              const SizedBox(height: 12),
+              _profileTextField(
+                controller: _mothersNameCtrl,
+                label: "Mother's Name",
+                icon: Icons.female,
+              ),
+              const SizedBox(height: 12),
+              _profileTextField(
+                controller: _fathersNameCtrl,
+                label: "Father's Name",
+                icon: Icons.male,
+              ),
+              const SizedBox(height: 12),
+              _profileTextField(
+                controller: _addressCtrl,
+                label: 'Address',
+                icon: Icons.home_outlined,
+                multiline: true,
+              ),
+              const SizedBox(height: 12),
+              _dobField(),
+              const SizedBox(height: 12),
+              _profileTextField(
+                controller: _familyIdCtrl,
+                label: 'Family ID',
+                icon: Icons.group_outlined,
+              ),
+              const SizedBox(height: 12),
+              _profileTextField(
+                controller: _aadharNoCtrl,
+                label: 'Aadhar Card No.',
+                icon: Icons.credit_card_outlined,
+                keyboardType: TextInputType.number,
+                formatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(12),
+                ],
+                validator: (v) {
+                  final t = (v ?? '').trim();
+                  if (t.isEmpty) return null;
+                  return t.length == 12
+                      ? null
+                      : 'Aadhar number must be 12 digits';
+                },
+              ),
+              const SizedBox(height: 12),
+              _profileTextField(
+                controller: _bankAccountNoCtrl,
+                label: 'Bank Account No.',
+                icon: Icons.account_balance_outlined,
+                keyboardType: TextInputType.number,
+                formatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(18),
+                ],
               ),
               const SizedBox(height: 16),
               // Course
@@ -336,6 +465,49 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Text input for one optional profile field.
+  Widget _profileTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextCapitalization capitalization = TextCapitalization.words,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? formatters,
+    String? Function(String?)? validator,
+    bool multiline = false,
+  }) {
+    return TextFormField(
+      controller: controller,
+      textCapitalization: capitalization,
+      keyboardType: keyboardType ??
+          (multiline ? TextInputType.multiline : TextInputType.text),
+      textInputAction:
+          multiline ? TextInputAction.newline : TextInputAction.next,
+      maxLines: multiline ? 3 : 1,
+      inputFormatters: formatters,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        alignLabelWithHint: multiline,
+      ),
+    );
+  }
+
+  Widget _dobField() {
+    return TextFormField(
+      controller: _dobCtrl,
+      readOnly: true,
+      onTap: _pickDob,
+      decoration: const InputDecoration(
+        labelText: 'Date of Birth',
+        hintText: 'dd/mm/yyyy',
+        prefixIcon: Icon(Icons.cake_outlined),
+        suffixIcon: Icon(Icons.calendar_today, size: 18),
       ),
     );
   }
