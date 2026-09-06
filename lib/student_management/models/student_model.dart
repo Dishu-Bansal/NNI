@@ -38,6 +38,17 @@ class StudentModel {
   String? createdBy;
   String? lastUpdatedBy;
 
+  // Profile details (all optional).
+  String hnmcNo; // HNMC registration number.
+  String registrationNo; // Institute registration number.
+  String mothersName;
+  String fathersName;
+  String address;
+  DateTime? dateOfBirth;
+  String familyId;
+  String aadharNo; // 12-digit Aadhar card number.
+  String bankAccountNo;
+
   /// Snapshot of the fees at the time the student was created, used to show
   /// "original fees" in the fees detail.
   List<FeeEntry> originalFees;
@@ -62,6 +73,15 @@ class StudentModel {
     this.updatedAt,
     this.createdBy,
     this.lastUpdatedBy,
+    this.hnmcNo = '',
+    this.registrationNo = '',
+    this.mothersName = '',
+    this.fathersName = '',
+    this.address = '',
+    this.dateOfBirth,
+    this.familyId = '',
+    this.aadharNo = '',
+    this.bankAccountNo = '',
   });
 
   double get totalFees =>
@@ -90,6 +110,17 @@ class StudentModel {
             : null,
         createdBy: d['createdBy'] ?? '',
         lastUpdatedBy: d['lastUpdatedBy'] ?? '',
+        hnmcNo: d['hnmcNo'] ?? '',
+        registrationNo: d['registrationNo'] ?? '',
+        mothersName: d['mothersName'] ?? '',
+        fathersName: d['fathersName'] ?? '',
+        address: d['address'] ?? '',
+        dateOfBirth: d['dateOfBirth'] != null
+            ? DateTime.tryParse(d['dateOfBirth'])
+            : null,
+        familyId: d['familyId'] ?? '',
+        aadharNo: d['aadharNo'] ?? '',
+        bankAccountNo: d['bankAccountNo'] ?? '',
       );
 
   static List<FeeEntry> _parseFees(dynamic raw) {
@@ -113,6 +144,15 @@ class StudentModel {
     'updatedAt': updatedAt?.toIso8601String(),
     'createdBy': createdBy ?? '',
     'lastUpdatedBy': lastUpdatedBy ?? '',
+    'hnmcNo': hnmcNo,
+    'registrationNo': registrationNo,
+    'mothersName': mothersName,
+    'fathersName': fathersName,
+    'address': address,
+    'dateOfBirth': dateOfBirth?.toIso8601String() ?? '',
+    'familyId': familyId,
+    'aadharNo': aadharNo,
+    'bankAccountNo': bankAccountNo,
   };
 }
 
