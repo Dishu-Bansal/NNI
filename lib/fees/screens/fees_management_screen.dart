@@ -123,6 +123,14 @@ class _StudentsTabState extends State<_StudentsTab> {
 
   final _searchCtrl = TextEditingController();
 
+  // Streams are created once per tab. Keystrokes in the search box then only
+  // re-filter the already-loaded data instead of re-subscribing to Firestore
+  // (which made the list reload on every key press).
+  late final Stream<List<StudentModel>> _studentsStream =
+      widget.studentService.watchAll();
+  late final Stream<List<ReceiptModel>> _receiptsStream =
+      widget.feesService.watchAllReceipts();
+
   /// null means "all".
   String? _courseFilter;
   String? _collegeFilter;
@@ -160,7 +168,7 @@ class _StudentsTabState extends State<_StudentsTab> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<StudentModel>>(
-      stream: widget.studentService.watchAll(),
+      stream: _studentsStream,
       builder: (context, studentSnap) {
         if (studentSnap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -169,7 +177,7 @@ class _StudentsTabState extends State<_StudentsTab> {
         final years = students.map((s) => s.admissionYear).toSet().toList()
           ..sort((a, b) => b.compareTo(a));
         return StreamBuilder<List<ReceiptModel>>(
-          stream: widget.feesService.watchAllReceipts(),
+          stream: _receiptsStream,
           builder: (context, receiptSnap) {
             final receipts = receiptSnap.data ?? [];
             final paidByStudent = <String, double>{};
@@ -660,10 +668,18 @@ class _StudentCard extends StatelessWidget {
 
 // ── Receipts tab ─────────────────────────────────────────────────────────────
 
-class _ReceiptsTab extends StatelessWidget {
+class _ReceiptsTab extends StatefulWidget {
   final FirebaseFeesService service;
 
   const _ReceiptsTab({required this.service});
+
+  @override
+  State<_ReceiptsTab> createState() => _ReceiptsTabState();
+}
+
+class _ReceiptsTabState extends State<_ReceiptsTab> {
+  late final Stream<List<ReceiptModel>> _receiptsStream =
+      widget.service.watchAllReceipts();
 
   String _money(double v) => '₹${v.toStringAsFixed(0)}';
 
@@ -687,7 +703,7 @@ class _ReceiptsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<ReceiptModel>>(
-      stream: service.watchAllReceipts(),
+      stream: _receiptsStream,
       builder: (context, snap) {
         final receipts = snap.data ?? [];
         if (snap.connectionState == ConnectionState.waiting &&
@@ -797,10 +813,18 @@ class _ReceiptsTab extends StatelessWidget {
 
 // ── Logs tab ─────────────────────────────────────────────────────────────────
 
-class _LogsTab extends StatelessWidget {
+class _LogsTab extends StatefulWidget {
   final FirebaseFeesService service;
 
   const _LogsTab({required this.service});
+
+  @override
+  State<_LogsTab> createState() => _LogsTabState();
+}
+
+class _LogsTabState extends State<_LogsTab> {
+  late final Stream<List<ReceiptLog>> _logsStream =
+      widget.service.watchAllLogs();
 
   String _fmtDateTime(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}  '
@@ -809,7 +833,7 @@ class _LogsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<ReceiptLog>>(
-      stream: service.watchAllLogs(),
+      stream: _logsStream,
       builder: (context, snap) {
         final logs = snap.data ?? [];
         if (snap.connectionState == ConnectionState.waiting && logs.isEmpty) {
