@@ -28,6 +28,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
   late int _year;
   StudentModel? _selectedStudent;
 
+  final _studentCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
   final _modeCtrl = TextEditingController(text: 'Cash');
   final _receiptNoCtrl = TextEditingController();
@@ -51,6 +52,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
 
   @override
   void dispose() {
+    _studentCtrl.dispose();
     _amountCtrl.dispose();
     _modeCtrl.dispose();
     _receiptNoCtrl.dispose();
@@ -81,7 +83,10 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
       ),
     );
     if (picked != null && mounted) {
-      setState(() => _selectedStudent = picked);
+      setState(() {
+        _selectedStudent = picked;
+        _studentCtrl.text = picked.name;
+      });
     }
   }
 
@@ -174,6 +179,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
                         setState(() {
                           _college = v;
                           _selectedStudent = null;
+                          _studentCtrl.clear();
                         });
                       }
                     },
@@ -196,6 +202,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
                         setState(() {
                           _course = v;
                           _selectedStudent = null;
+                          _studentCtrl.clear();
                         });
                       }
                     },
@@ -219,35 +226,24 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
                     setState(() {
                       _year = v;
                       _selectedStudent = null;
+                      _studentCtrl.clear();
                     });
                   }
                 },
               ),
               const SizedBox(height: 12),
               // Student — opens a searchable picker of the students matching
-              // the college/course/year chosen above.
-              InkWell(
+              // the college/course/year chosen above. A read-only text field
+              // keeps the label/hint layering identical to the other inputs.
+              TextFormField(
+                controller: _studentCtrl,
+                readOnly: true,
                 onTap: _saving ? null : _openStudentPicker,
-                borderRadius: BorderRadius.circular(4),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Student *',
-                    prefixIcon: Icon(Icons.person_search_outlined),
-                    suffixIcon: Icon(Icons.arrow_drop_down),
-                  ),
-                  isEmpty: _selectedStudent == null,
-                  child: _selectedStudent == null
-                      ? Text(
-                          'Search by name, father, roll no. or HNMC',
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.grey.shade600),
-                        )
-                      : Text(
-                          _selectedStudent!.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w600),
-                        ),
+                decoration: const InputDecoration(
+                  labelText: 'Student *',
+                  hintText: 'Search by name, father, roll no. or HNMC',
+                  prefixIcon: Icon(Icons.person_search_outlined),
+                  suffixIcon: Icon(Icons.arrow_drop_down),
                 ),
               ),
               if (_selectedStudent != null)
