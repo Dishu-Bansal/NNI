@@ -7,7 +7,7 @@ import '../../student_management/services/firebase_student_service.dart';
 import '../services/firebase_fees_service.dart';
 
 /// Records a fee receipt for a student. The student is picked through
-/// College → Course → Admission year → Name/Roll No dropdowns.
+/// College → Course → Admission year → a searchable student list.
 class ReceiptFormScreen extends StatefulWidget {
   const ReceiptFormScreen({super.key});
 
@@ -28,6 +28,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
   late int _year;
   StudentModel? _selectedStudent;
 
+  final _studentCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
   final _modeCtrl = TextEditingController(text: 'Cash');
   final _receiptNoCtrl = TextEditingController();
@@ -51,6 +52,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
 
   @override
   void dispose() {
+    _studentCtrl.dispose();
     _amountCtrl.dispose();
     _modeCtrl.dispose();
     _receiptNoCtrl.dispose();
@@ -65,8 +67,27 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
       .toList()
     ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
-  void _selectStudent(StudentModel? s) {
-    setState(() => _selectedStudent = s);
+  Future<void> _openStudentPicker() async {
+    final students = _filteredStudents;
+    if (students.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No students match College/Course/Year.')));
+      return;
+    }
+    final picked = await showModalBottomSheet<StudentModel>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => FractionallySizedBox(
+        heightFactor: 0.85,
+        child: _StudentPickerSheet(students: students),
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _selectedStudent = picked;
+        _studentCtrl.text = picked.name;
+      });
+    }
   }
 
   Future<void> _pickPhoto() async {
@@ -158,6 +179,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
                         setState(() {
                           _college = v;
                           _selectedStudent = null;
+                          _studentCtrl.clear();
                         });
                       }
                     },
@@ -180,6 +202,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
                         setState(() {
                           _course = v;
                           _selectedStudent = null;
+                          _studentCtrl.clear();
                         });
                       }
                     },
@@ -203,56 +226,31 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
                     setState(() {
                       _year = v;
                       _selectedStudent = null;
+                      _studentCtrl.clear();
                     });
                   }
                 },
               ),
               const SizedBox(height: 12),
-              // Student name
-              DropdownButtonFormField<StudentModel>(
-                key: ValueKey('name-$_college-$_course-$_year'),
-                initialValue: _selectedStudent,
+              // Student — opens a searchable picker of the students matching
+              // the college/course/year chosen above. A read-only text field
+              // keeps the label/hint layering identical to the other inputs.
+              TextFormField(
+                controller: _studentCtrl,
+                readOnly: true,
+                onTap: _saving ? null : _openStudentPicker,
                 decoration: const InputDecoration(
-                  labelText: 'Student Name',
-                  prefixIcon: Icon(Icons.person_outline),
+                  labelText: 'Student *',
+                  hintText: 'Search by name, father, roll no. or HNMC',
+                  prefixIcon: Icon(Icons.person_search_outlined),
+                  suffixIcon: Icon(Icons.arrow_drop_down),
                 ),
-                items: filtered
-                    .map((s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(
-                            s.name,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ))
-                    .toList(),
-                onChanged: _selectStudent,
               ),
-              const SizedBox(height: 12),
-              // Roll no — shares the same selection as the name dropdown.
-              DropdownButtonFormField<String>(
-                key: ValueKey('roll-$_college-$_course-$_year'),
-                initialValue: _selectedStudent?.id,
-                decoration: const InputDecoration(
-                  labelText: 'Roll No.',
-                  prefixIcon: Icon(Icons.numbers),
+              if (_selectedStudent != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: _StudentSummary(student: _selectedStudent!),
                 ),
-                items: [
-                  for (final s in filtered)
-                    DropdownMenuItem(
-                      value: s.id,
-                      child: Text(s.rollNo.isEmpty ? '—' : s.rollNo),
-                    ),
-                ],
-                onChanged: (id) {
-                  if (id == null) {
-                    setState(() => _selectedStudent = null);
-                    return;
-                  }
-                  final match =
-                      filtered.where((s) => s.id == id).firstOrNull;
-                  setState(() => _selectedStudent = match);
-                },
-              ),
               if (!_studentsLoaded)
                 const Padding(
                   padding: EdgeInsets.only(top: 8),
@@ -367,6 +365,213 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Searchable student picker (bottom sheet) ────────────────────────────────
+
+/// Bottom-sheet list of candidate students with a search box on top.
+/// Entries show the student's name, father's name and roll no. + HNMC no.
+class _StudentPickerSheet extends StatefulWidget {
+  final List<StudentModel> students;
+
+  const _StudentPickerSheet({required this.students});
+
+  @override
+  State<_StudentPickerSheet> createState() => _StudentPickerSheetState();
+}
+
+class _StudentPickerSheetState extends State<_StudentPickerSheet> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<StudentModel> get _results {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return widget.students;
+    return widget.students
+        .where((s) =>
+            s.name.toLowerCase().contains(q) ||
+            s.fathersName.toLowerCase().contains(q) ||
+            s.rollNo.toLowerCase().contains(q) ||
+            s.hnmcNo.toLowerCase().contains(q))
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final results = _results;
+    return SafeArea(
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+          child: Row(children: [
+            const Text('Select Student',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const Spacer(),
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close),
+              tooltip: 'Close',
+            ),
+          ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: TextField(
+            controller: _searchCtrl,
+            autofocus: true,
+            onChanged: (v) => setState(() => _query = v),
+            decoration: InputDecoration(
+              hintText: 'Search by name, father, roll no. or HNMC',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _query.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() => _query = '');
+                      },
+                    ),
+              isDense: true,
+              filled: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: results.isEmpty
+              ? const Center(
+                  child: Text('No students match your search.',
+                      style: TextStyle(color: Colors.grey)),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                  itemCount: results.length,
+                  separatorBuilder: (_, _) => Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: Colors.grey.shade100),
+                  itemBuilder: (_, i) => _StudentPickerTile(
+                    student: results[i],
+                    onTap: () => Navigator.pop(context, results[i]),
+                  ),
+                ),
+        ),
+      ]),
+    );
+  }
+}
+
+class _StudentPickerTile extends StatelessWidget {
+  final StudentModel student;
+  final VoidCallback onTap;
+
+  const _StudentPickerTile({required this.student, required this.onTap});
+
+  String get _initial {
+    final n = student.name.trim();
+    return n.isEmpty ? '?' : n.characters.first.toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ids = <String>[
+      if (student.rollNo.isNotEmpty) 'Roll: ${student.rollNo}',
+      if (student.hnmcNo.isNotEmpty) 'HNMC: ${student.hnmcNo}',
+    ].join('  •  ');
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: const Color(0xFF1A3C6E).withValues(alpha: 0.12),
+            child: Text(_initial,
+                style: const TextStyle(
+                    color: Color(0xFF1A3C6E),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(student.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 14)),
+                if (student.fathersName.isNotEmpty)
+                  Text('Father: ${student.fathersName}',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey.shade700)),
+                if (ids.isNotEmpty)
+                  Text(ids,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: TextStyle(
+                          fontSize: 11, color: Colors.grey.shade600)),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Small confirmation card under the student field showing the picked
+/// student's father's name and roll no. + HNMC no. (when present).
+class _StudentSummary extends StatelessWidget {
+  final StudentModel student;
+
+  const _StudentSummary({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasFather = student.fathersName.isNotEmpty;
+    final ids = <String>[
+      if (student.rollNo.isNotEmpty) 'Roll: ${student.rollNo}',
+      if (student.hnmcNo.isNotEmpty) 'HNMC: ${student.hnmcNo}',
+    ];
+    if (!hasFather && ids.isEmpty) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A3C6E).withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasFather)
+            Text('Father: ${student.fathersName}',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade800)),
+          if (ids.isNotEmpty)
+            Text(ids.join('  •  '),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+        ],
       ),
     );
   }
