@@ -602,20 +602,47 @@ class _TableRow extends StatelessWidget {
                   : _avatar(initial),
             ),
             const SizedBox(width: 10),
-            Flexible(
-              child: Text(student.name,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 14)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(student.name,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 14)),
+                  if (student.fathersName.isNotEmpty)
+                    Text(
+                      'Father: ${student.fathersName}',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: TextStyle(
+                          fontSize: 11, color: Colors.grey.shade600),
+                    ),
+                ],
+              ),
             ),
           ]),
         ),
         Expanded(
           flex: 1,
-          child: Text(
-            student.rollNo.isEmpty ? '—' : student.rollNo,
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
-            overflow: TextOverflow.ellipsis,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                student.rollNo.isEmpty ? '—' : student.rollNo,
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              if (student.hnmcNo.isNotEmpty)
+                Text(
+                  'HNMC: ${student.hnmcNo}',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                ),
+            ],
           ),
         ),
         Expanded(
@@ -739,6 +766,7 @@ class _StudentCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     '${student.rollNo.isNotEmpty ? 'Roll ${student.rollNo}  •  ' : ''}'
+                    '${student.hnmcNo.isNotEmpty ? 'HNMC ${student.hnmcNo}  •  ' : ''}'
                     'Admitted ${student.admissionYear}'
                     '${fees > 0 ? '  •  ${student.fees.length} fee '
                         '${student.fees.length == 1 ? 'entry' : 'entries'}'
@@ -746,6 +774,16 @@ class _StudentCard extends StatelessWidget {
                     style: TextStyle(
                         fontSize: 11, color: Colors.grey.shade600),
                   ),
+                  if (student.fathersName.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Text(
+                        'Father: ${student.fathersName}',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade600),
+                      ),
+                    ),
                 ],
               ),
             ),
