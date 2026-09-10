@@ -4,6 +4,7 @@ import '../../widgets/app_drawer.dart';
 import '../../widgets/pagination_bar.dart';
 import '../models/student_model.dart';
 import '../services/firebase_student_service.dart';
+import 'student_detail_screen.dart';
 import 'student_form_screen.dart';
 
 class StudentListScreen extends StatefulWidget {
@@ -36,6 +37,15 @@ class _StudentListScreenState extends State<StudentListScreen>
       context,
       MaterialPageRoute(
         builder: (_) => StudentFormScreen(existing: student),
+      ),
+    );
+  }
+
+  void _openDetail(StudentModel student) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentDetailScreen(student: student),
       ),
     );
   }
@@ -98,7 +108,12 @@ class _StudentListScreenState extends State<StudentListScreen>
       body: TabBarView(
         controller: _tabs,
         children: [
-          _StudentsTab(service: _service, onEdit: _openForm, onDelete: _delete),
+          _StudentsTab(
+            service: _service,
+            onView: _openDetail,
+            onEdit: _openForm,
+            onDelete: _delete,
+          ),
           _LogsTab(service: _service),
         ],
       ),
@@ -120,11 +135,13 @@ class _StudentListScreenState extends State<StudentListScreen>
 
 class _StudentsTab extends StatefulWidget {
   final FirebaseStudentService service;
+  final void Function(StudentModel) onView;
   final void Function(StudentModel?) onEdit;
   final void Function(StudentModel) onDelete;
 
   const _StudentsTab({
     required this.service,
+    required this.onView,
     required this.onEdit,
     required this.onDelete,
   });
@@ -349,6 +366,7 @@ class _StudentsTabState extends State<_StudentsTab> {
                                     const SizedBox(height: 10),
                                 itemBuilder: (_, i) => _StudentCard(
                                   student: slice[i],
+                                  onView: () => widget.onView(slice[i]),
                                   onEdit: () => widget.onEdit(slice[i]),
                                   onDelete: () => widget.onDelete(slice[i]),
                                   initial: _initial(slice[i].name),
@@ -359,6 +377,7 @@ class _StudentsTabState extends State<_StudentsTab> {
                                 sortColumnIndex: _sortCol,
                                 sortAscending: _sortAsc,
                                 onSort: _onSort,
+                                onView: (s) => widget.onView(s),
                                 onEdit: (s) => widget.onEdit(s),
                                 onDelete: (s) => widget.onDelete(s),
                                 initialOf: _initial,
@@ -430,6 +449,7 @@ class _StudentTable extends StatelessWidget {
   final int sortColumnIndex;
   final bool sortAscending;
   final void Function(int) onSort;
+  final void Function(StudentModel) onView;
   final void Function(StudentModel) onEdit;
   final void Function(StudentModel) onDelete;
   final String Function(String) initialOf;
@@ -439,6 +459,7 @@ class _StudentTable extends StatelessWidget {
     required this.sortColumnIndex,
     required this.sortAscending,
     required this.onSort,
+    required this.onView,
     required this.onEdit,
     required this.onDelete,
     required this.initialOf,
@@ -470,6 +491,7 @@ class _StudentTable extends StatelessWidget {
               student: students[i],
               isEven: i.isEven,
               initial: initialOf(students[i].name),
+              onView: () => onView(students[i]),
               onEdit: () => onEdit(students[i]),
               onDelete: () => onDelete(students[i]),
             ),
@@ -518,7 +540,7 @@ class _TableHeader extends StatelessWidget {
                   fontSize: 13)),
         ),
         const Expanded(
-          flex: 1,
+          flex: 2,
           child: Text('Actions',
               style: TextStyle(
                   fontWeight: FontWeight.w700,
@@ -569,6 +591,7 @@ class _TableRow extends StatelessWidget {
   final StudentModel student;
   final bool isEven;
   final String initial;
+  final VoidCallback onView;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -576,6 +599,7 @@ class _TableRow extends StatelessWidget {
     required this.student,
     required this.isEven,
     required this.initial,
+    required this.onView,
     required this.onEdit,
     required this.onDelete,
   });
@@ -671,12 +695,19 @@ class _TableRow extends StatelessWidget {
           ),
         ),
         Expanded(
-          flex: 1,
+          flex: 2,
           child: Row(children: [
+            IconButton(
+              onPressed: onView,
+              icon: const Icon(Icons.visibility_outlined,
+                  size: 18, color: Color(0xFF1A3C6E)),
+              tooltip: 'View',
+              visualDensity: VisualDensity.compact,
+            ),
             IconButton(
               onPressed: onEdit,
               icon: const Icon(Icons.edit_outlined,
-                  size: 18, color: Color(0xFF1A3C6E)),
+                  size: 18, color: Colors.amber),
               tooltip: 'Edit',
               visualDensity: VisualDensity.compact,
             ),
@@ -712,12 +743,14 @@ class _TableRow extends StatelessWidget {
 
 class _StudentCard extends StatelessWidget {
   final StudentModel student;
+  final VoidCallback onView;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final String initial;
 
   const _StudentCard({
     required this.student,
+    required this.onView,
     required this.onEdit,
     required this.onDelete,
     required this.initial,
@@ -788,8 +821,20 @@ class _StudentCard extends StatelessWidget {
               ),
             ),
             PopupMenuButton<String>(
-              onSelected: (v) => v == 'edit' ? onEdit() : onDelete(),
+              onSelected: (v) {
+                if (v == 'view') onView();
+                if (v == 'edit') onEdit();
+                if (v == 'delete') onDelete();
+              },
               itemBuilder: (_) => [
+                const PopupMenuItem(
+                    value: 'view',
+                    child: Row(children: [
+                      Icon(Icons.visibility_outlined,
+                          size: 16, color: Color(0xFF1A3C6E)),
+                      SizedBox(width: 8),
+                      Text('View'),
+                    ])),
                 const PopupMenuItem(
                     value: 'edit',
                     child: Row(children: [
