@@ -145,6 +145,9 @@ class FirebaseStudentService implements StudentRepository {
     diff('Family ID', old.familyId, updated.familyId);
     diff('Aadhar No.', old.aadharNo, updated.aadharNo);
     diff('Bank Account No.', old.bankAccountNo, updated.bankAccountNo);
+    diff('Primary phone', old.primaryPhone, updated.primaryPhone);
+    diff("Father's phone", old.fathersPhone, updated.fathersPhone);
+    diff('Alternate phone', old.alternatePhone, updated.alternatePhone);
 
     final oldFees = old.fees.map((f) => '${f.type}:${f.amount}').toList()
       ..sort();
