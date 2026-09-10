@@ -52,6 +52,9 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   final _familyIdCtrl = TextEditingController();
   final _aadharNoCtrl = TextEditingController();
   final _bankAccountNoCtrl = TextEditingController();
+  final _primaryPhoneCtrl = TextEditingController();
+  final _fathersPhoneCtrl = TextEditingController();
+  final _alternatePhoneCtrl = TextEditingController();
 
   String _course = 'GNM';
   String _college = 'Mahendargarh';
@@ -86,6 +89,9 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
       _familyIdCtrl.text = existing.familyId;
       _aadharNoCtrl.text = existing.aadharNo;
       _bankAccountNoCtrl.text = existing.bankAccountNo;
+      _primaryPhoneCtrl.text = existing.primaryPhone;
+      _fathersPhoneCtrl.text = existing.fathersPhone;
+      _alternatePhoneCtrl.text = existing.alternatePhone;
       _initRowsFrom(existing);
     } else {
       _initDefaultRows();
@@ -162,6 +168,9 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
     _familyIdCtrl.dispose();
     _aadharNoCtrl.dispose();
     _bankAccountNoCtrl.dispose();
+    _primaryPhoneCtrl.dispose();
+    _fathersPhoneCtrl.dispose();
+    _alternatePhoneCtrl.dispose();
     for (final r in _rows) {
       r.dispose();
     }
@@ -238,6 +247,9 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
       familyId: _familyIdCtrl.text.trim(),
       aadharNo: _aadharNoCtrl.text.trim(),
       bankAccountNo: _bankAccountNoCtrl.text.trim(),
+      primaryPhone: _primaryPhoneCtrl.text.trim(),
+      fathersPhone: _fathersPhoneCtrl.text.trim(),
+      alternatePhone: _alternatePhoneCtrl.text.trim(),
     );
 
     setState(() => _saving = true);
@@ -338,6 +350,33 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                 label: 'Address',
                 icon: Icons.home_outlined,
                 multiline: true,
+              ),
+              const SizedBox(height: 12),
+              _profileTextField(
+                controller: _primaryPhoneCtrl,
+                label: 'Primary Phone Number',
+                icon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
+                formatters: _phoneFormatters,
+                validator: _phoneValidator,
+              ),
+              const SizedBox(height: 12),
+              _profileTextField(
+                controller: _fathersPhoneCtrl,
+                label: "Father's Phone Number",
+                icon: Icons.contact_phone_outlined,
+                keyboardType: TextInputType.phone,
+                formatters: _phoneFormatters,
+                validator: _phoneValidator,
+              ),
+              const SizedBox(height: 12),
+              _profileTextField(
+                controller: _alternatePhoneCtrl,
+                label: 'Alternate Phone Number',
+                icon: Icons.phone_iphone,
+                keyboardType: TextInputType.phone,
+                formatters: _phoneFormatters,
+                validator: _phoneValidator,
               ),
               const SizedBox(height: 12),
               _dobField(),
@@ -467,6 +506,20 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
         ),
       ),
     );
+  }
+
+  /// Phone inputs accept digits, spaces, '+' and '-' (for country codes) and
+  /// are capped at 15 characters.
+  List<TextInputFormatter> get _phoneFormatters => [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9+\- ]')),
+        LengthLimitingTextInputFormatter(15),
+      ];
+
+  /// Phone numbers stay optional; when filled they need at least 10 digits.
+  String? _phoneValidator(String? v) {
+    final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return null;
+    return digits.length >= 10 ? null : 'Enter a valid phone number';
   }
 
   /// Text input for one optional profile field.

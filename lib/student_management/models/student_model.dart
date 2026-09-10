@@ -48,6 +48,9 @@ class StudentModel {
   String familyId;
   String aadharNo; // 12-digit Aadhar card number.
   String bankAccountNo;
+  String primaryPhone; // Student's own phone number.
+  String fathersPhone;
+  String alternatePhone;
 
   /// Snapshot of the fees at the time the student was created, used to show
   /// "original fees" in the fees detail.
@@ -82,6 +85,9 @@ class StudentModel {
     this.familyId = '',
     this.aadharNo = '',
     this.bankAccountNo = '',
+    this.primaryPhone = '',
+    this.fathersPhone = '',
+    this.alternatePhone = '',
   });
 
   double get totalFees =>
@@ -121,6 +127,9 @@ class StudentModel {
         familyId: d['familyId'] ?? '',
         aadharNo: d['aadharNo'] ?? '',
         bankAccountNo: d['bankAccountNo'] ?? '',
+        primaryPhone: d['primaryPhone'] ?? '',
+        fathersPhone: d['fathersPhone'] ?? '',
+        alternatePhone: d['alternatePhone'] ?? '',
       );
 
   static List<FeeEntry> _parseFees(dynamic raw) {
@@ -153,6 +162,9 @@ class StudentModel {
     'familyId': familyId,
     'aadharNo': aadharNo,
     'bankAccountNo': bankAccountNo,
+    'primaryPhone': primaryPhone,
+    'fathersPhone': fathersPhone,
+    'alternatePhone': alternatePhone,
   };
 }
 
