@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../access/app_session.dart';
+import '../../access/session_service.dart';
+import '../../access/widgets/no_access_screen.dart';
 import '../../student_management/models/student_model.dart';
 import '../../student_management/services/firebase_student_service.dart';
 import '../../widgets/app_drawer.dart';
@@ -23,6 +26,9 @@ class _FeesManagementScreenState extends State<FeesManagementScreen>
     with SingleTickerProviderStateMixin {
   final _feesService = FirebaseFeesService();
   final _studentService = FirebaseStudentService();
+  final _sessionService = SessionService();
+  late final Stream<AppSession?> _sessionStream =
+      _sessionService.watchSession();
   late final TabController _tabs;
 
   @override
@@ -55,9 +61,27 @@ class _FeesManagementScreenState extends State<FeesManagementScreen>
 
   @override
   Widget build(BuildContext context) {
+    return StreamBuilder<AppSession?>(
+      stream: _sessionStream,
+      builder: (context, snap) {
+        final session = snap.data;
+        if (!snap.hasData || session == null) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+        if (!session.canAccessFees) {
+          return noAccessScaffold(
+              module: 'Fees Management', drawer: const AppDrawer());
+        }
+        return _content(session.canViewTotalPending);
+      },
+    );
+  }
+
+  Widget _content(bool canViewTotalPending) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
-      drawer: appDrawer(context),
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Fees Management',
             style: TextStyle(fontWeight: FontWeight.w700)),
@@ -81,6 +105,7 @@ class _FeesManagementScreenState extends State<FeesManagementScreen>
           _StudentsTab(
             studentService: _studentService,
             feesService: _feesService,
+            canViewTotalPending: canViewTotalPending,
             onOpen: _openStudentFees,
           ),
           _ReceiptsTab(service: _feesService),
@@ -106,11 +131,13 @@ class _FeesManagementScreenState extends State<FeesManagementScreen>
 class _StudentsTab extends StatefulWidget {
   final FirebaseStudentService studentService;
   final FirebaseFeesService feesService;
+  final bool canViewTotalPending;
   final void Function(StudentModel) onOpen;
 
   const _StudentsTab({
     required this.studentService,
     required this.feesService,
+    required this.canViewTotalPending,
     required this.onOpen,
   });
 
@@ -330,9 +357,12 @@ class _StudentsTabState extends State<_StudentsTab> {
                     ),
                   ),
                 ),
-              // Total pending summary — reflects the active filters.
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+              // Total pending summary — reflects the active filters. Hidden
+              // when the signed-in user may not view aggregate pending fees
+              // (per-student fees stay visible).
+              if (widget.canViewTotalPending)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
