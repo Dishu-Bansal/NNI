@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../widgets/app_drawer.dart';
 import '../../widgets/pagination_bar.dart';
+import '../../access/app_session.dart';
+import '../../access/session_service.dart';
+import '../../access/widgets/no_access_screen.dart';
 import '../models/student_model.dart';
 import '../services/firebase_student_service.dart';
 import 'student_detail_screen.dart';
@@ -17,6 +20,9 @@ class StudentListScreen extends StatefulWidget {
 class _StudentListScreenState extends State<StudentListScreen>
     with SingleTickerProviderStateMixin {
   final _service = FirebaseStudentService();
+  final _sessionService = SessionService();
+  late final Stream<AppSession?> _sessionStream =
+      _sessionService.watchSession();
   late final TabController _tabs;
 
   @override
@@ -88,9 +94,34 @@ class _StudentListScreenState extends State<StudentListScreen>
 
   @override
   Widget build(BuildContext context) {
+    return StreamBuilder<AppSession?>(
+      stream: _sessionStream,
+      builder: (context, snap) {
+        final session = snap.data;
+        // Still resolving the first event: show a loader. A resolved null
+        // session means signed out (main.dart routes to login on the same
+        // auth event), so render nothing instead of spinning forever.
+        if (snap.connectionState == ConnectionState.waiting &&
+            !snap.hasData) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+        if (session == null) {
+          return const Scaffold(body: SizedBox.shrink());
+        }
+        if (!session.canAccessStudents) {
+          return noAccessScaffold(
+              module: 'Student Management', drawer: const AppDrawer());
+        }
+        return _content();
+      },
+    );
+  }
+
+  Widget _content() {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
-      drawer: appDrawer(context),
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Student Management',
             style: TextStyle(fontWeight: FontWeight.w700)),
