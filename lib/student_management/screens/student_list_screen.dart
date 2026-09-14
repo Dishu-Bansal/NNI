@@ -88,9 +88,16 @@ class _StudentListScreenState extends State<StudentListScreen>
       stream: _sessionStream,
       builder: (context, snap) {
         final session = snap.data;
-        if (!snap.hasData || session == null) {
+        // Still resolving the first event: show a loader. A resolved null
+        // session means signed out (main.dart routes to login on the same
+        // auth event), so render nothing instead of spinning forever.
+        if (snap.connectionState == ConnectionState.waiting &&
+            !snap.hasData) {
           return const Scaffold(
               body: Center(child: CircularProgressIndicator()));
+        }
+        if (session == null) {
+          return const Scaffold(body: SizedBox.shrink());
         }
         if (!session.canAccessStudents) {
           return noAccessScaffold(

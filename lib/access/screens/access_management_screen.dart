@@ -83,9 +83,16 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
       stream: _sessionStream,
       builder: (context, sessionSnap) {
         final session = sessionSnap.data;
-        if (!sessionSnap.hasData || session == null) {
+        // Still resolving the first event: show a loader. A resolved null
+        // session means signed out (main.dart routes to login on the same
+        // auth event), so render nothing instead of spinning forever.
+        if (sessionSnap.connectionState == ConnectionState.waiting &&
+            !sessionSnap.hasData) {
           return const Scaffold(
               body: Center(child: CircularProgressIndicator()));
+        }
+        if (session == null) {
+          return const Scaffold(body: SizedBox.shrink());
         }
         if (!session.isAdmin) {
           return noAccessScaffold(

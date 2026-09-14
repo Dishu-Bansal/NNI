@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../access/app_session.dart';
@@ -22,6 +23,33 @@ class _AppDrawerState extends State<AppDrawer> {
   final _sessionService = SessionService();
   late final Stream<AppSession?> _sessionStream =
       _sessionService.watchSession();
+
+  /// Signs out with instant feedback: the drawer closes immediately,
+  /// failures surface as a message instead of a dead tap, and the stack
+  /// resets to the first route so the auth-driven login screen in
+  /// main.dart is guaranteed to be visible afterwards.
+  Future<void> _logout() async {
+    Navigator.pop(context); // close the drawer first
+    try {
+      await FirebaseAuth.instance.signOut();
+      // Hygiene for the secondary instance used by admin account creation.
+      try {
+        final secondary = Firebase.app('account-creator');
+        await FirebaseAuth.instanceFor(app: secondary).signOut();
+      } catch (_) {
+        // No secondary app active — nothing to do.
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Logout failed: $e')),
+      );
+      return;
+    }
+    if (mounted) {
+      Navigator.popUntil(context, (route) => route.isFirst);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,9 +135,7 @@ class _AppDrawerState extends State<AppDrawer> {
               ListTile(
                 leading: const Icon(Icons.logout),
                 title: const Text('Log Out'),
-                onTap: () async {
-                  await FirebaseAuth.instance.signOut();
-                },
+                onTap: _logout,
               ),
             ],
           ),
