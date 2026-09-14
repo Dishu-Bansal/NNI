@@ -32,7 +32,7 @@ class SessionService {
   Stream<AppSession?> watchSession() {
     return FirebaseAuth.instance.authStateChanges().asyncExpand((user) {
       if (user == null) return Stream<AppSession?>.value(null);
-      final email = (user.email ?? '').trim();
+      final email = (user.email ?? '').trim().toLowerCase();
       if (isAdminEmail(email)) {
         return Stream<AppSession?>.value(AppSession(
           uid: user.uid,
@@ -49,23 +49,47 @@ class SessionService {
           .snapshots()
           .asyncMap((doc) async {
         if (!doc.exists) {
+          // First login: inherit flags from a pre-provisioned doc for this
+          // email (created by the admin's one-time helper) when one exists,
+          // otherwise fall back to the defaults.
+          var students = _defaultStudents;
+          var fees = _defaultFees;
+          var pending = _defaultPending;
+          String? seedDocId;
+          final seed = await _db
+              .collection(_collection)
+              .where('email', isEqualTo: email)
+              .limit(1)
+              .get();
+          if (seed.docs.isNotEmpty) {
+            final s = seed.docs.first.data();
+            students = s['canAccessStudents'] as bool? ?? students;
+            fees = s['canAccessFees'] as bool? ?? fees;
+            pending = s['canViewTotalPending'] as bool? ?? pending;
+            seedDocId = seed.docs.first.id;
+          }
           final now = DateTime.now().toIso8601String();
           await _db.collection(_collection).doc(user.uid).set({
             'email': email,
-            'canAccessStudents': _defaultStudents,
-            'canAccessFees': _defaultFees,
-            'canViewTotalPending': _defaultPending,
+            'canAccessStudents': students,
+            'canAccessFees': fees,
+            'canViewTotalPending': pending,
             'createdAt': now,
             'updatedAt': now,
             'updatedBy': email,
           });
+          // The uid doc is now the source of truth; drop the consumed
+          // pre-provisioned doc so each account appears once.
+          if (seedDocId != null && seedDocId != user.uid) {
+            await _db.collection(_collection).doc(seedDocId).delete();
+          }
           return AppSession(
             uid: user.uid,
             email: email,
             isAdmin: false,
-            canAccessStudents: _defaultStudents,
-            canAccessFees: _defaultFees,
-            canViewTotalPending: _defaultPending,
+            canAccessStudents: students,
+            canAccessFees: fees,
+            canViewTotalPending: pending,
           );
         }
         final d = doc.data()!;
@@ -106,5 +130,49 @@ class SessionService {
       'updatedAt': DateTime.now().toIso8601String(),
       'updatedBy': by,
     });
+  }
+
+  /// Preset staff accounts for the one-time Home helper. Docs are keyed by
+  /// email; on first login their flags move into the real `uid` doc.
+  static const List<String> seedEmails = [
+    'reetugora123@gmail.com',
+    'gitalamba@123gmail.com',
+    'ramesh2001sharma123@gmail.com',
+    'manpreeetmatharu97@gmail.com',
+    'mlsharma.shimla94@gmail.com',
+  ];
+
+  /// Creates `users` docs with default flags for preset emails that have no
+  /// account doc yet (matched by email). Safe to run repeatedly: existing
+  /// accounts are skipped, never overwritten.
+  Future<SeedResult> seedAccounts() async {
+    final by = FirebaseAuth.instance.currentUser?.email ?? '';
+    var created = 0;
+    var skipped = 0;
+    for (final raw in seedEmails) {
+      final email = raw.trim().toLowerCase();
+      final existing = await _db
+          .collection(_collection)
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+      if (existing.docs.isNotEmpty) {
+        skipped++;
+        continue;
+      }
+      final now = DateTime.now().toIso8601String();
+      await _db.collection(_collection).doc(email).set({
+        'email': email,
+        'canAccessStudents': _defaultStudents,
+        'canAccessFees': _defaultFees,
+        'canViewTotalPending': _defaultPending,
+        'preProvisioned': true,
+        'createdAt': now,
+        'updatedAt': now,
+        'updatedBy': by,
+      });
+      created++;
+    }
+    return SeedResult(created: created, skipped: skipped);
   }
 }
