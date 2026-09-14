@@ -11,7 +11,10 @@ import 'app_session.dart';
 /// Management screen and changes stream to signed-in devices live.
 class SessionService {
   /// Hardcoded admin emails (compared case-insensitively).
-  static const List<String> adminEmails = ['pavitarpanghal@gmail.com'];
+  static const List<String> adminEmails = [
+    'pavitarpanghal@gmail.com',
+    'dishu1bansal@gmail.com',
+  ];
 
   static bool isAdminEmail(String? email) =>
       adminEmails.contains((email ?? '').trim().toLowerCase());
