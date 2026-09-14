@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 
+import '../firebase_options.dart';
 import 'app_session.dart';
 
 /// Resolves the signed-in user's access flags live from Firestore.
@@ -174,5 +176,72 @@ class SessionService {
       created++;
     }
     return SeedResult(created: created, skipped: skipped);
+  }
+
+  /// Creates a new email/password login for a staff member (admin only by
+  /// policy) and returns its access row. The account is created through a
+  /// secondary Firebase app so the admin stays signed in. Flags pre-set
+  /// for this email via the seed helper are inherited, otherwise the
+  /// defaults apply.
+  Future<AppUser> createAccount({
+    required String email,
+    required String password,
+  }) async {
+    final normalized = email.trim().toLowerCase();
+    FirebaseApp secondary;
+    try {
+      secondary = Firebase.app('account-creator');
+    } on FirebaseException {
+      secondary = await Firebase.initializeApp(
+        name: 'account-creator',
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+    final secondaryAuth = FirebaseAuth.instanceFor(app: secondary);
+    try {
+      final cred = await secondaryAuth.createUserWithEmailAndPassword(
+        email: normalized,
+        password: password,
+      );
+      final uid = cred.user!.uid;
+      var students = _defaultStudents;
+      var fees = _defaultFees;
+      var pending = _defaultPending;
+      String? seedDocId;
+      final seed = await _db
+          .collection(_collection)
+          .where('email', isEqualTo: normalized)
+          .limit(1)
+          .get();
+      if (seed.docs.isNotEmpty && seed.docs.first.id != uid) {
+        final s = seed.docs.first.data();
+        students = s['canAccessStudents'] as bool? ?? students;
+        fees = s['canAccessFees'] as bool? ?? fees;
+        pending = s['canViewTotalPending'] as bool? ?? pending;
+        seedDocId = seed.docs.first.id;
+      }
+      final now = DateTime.now().toIso8601String();
+      await _db.collection(_collection).doc(uid).set({
+        'email': normalized,
+        'canAccessStudents': students,
+        'canAccessFees': fees,
+        'canViewTotalPending': pending,
+        'createdAt': now,
+        'updatedAt': now,
+        'updatedBy': FirebaseAuth.instance.currentUser?.email ?? '',
+      });
+      if (seedDocId != null) {
+        await _db.collection(_collection).doc(seedDocId).delete();
+      }
+      return AppUser(
+        uid: uid,
+        email: normalized,
+        canAccessStudents: students,
+        canAccessFees: fees,
+        canViewTotalPending: pending,
+      );
+    } finally {
+      await secondaryAuth.signOut();
+    }
   }
 }
