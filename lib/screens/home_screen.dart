@@ -20,31 +20,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final _sessionService = SessionService();
   late final Stream<AppSession?> _sessionStream =
       _sessionService.watchSession();
-  bool _seeding = false;
-
-  /// One-time helper: pre-creates the preset staff accounts with default
-  /// access so they appear in Access Management before first login.
-  Future<void> _seed() async {
-    if (_seeding) return;
-    setState(() => _seeding = true);
-    try {
-      final r = await _sessionService.seedAccounts();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(
-                'Accounts ready: ${r.created} added, '
-                '${r.skipped} already present')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => _seeding = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,37 +98,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontSize: 13, color: Colors.grey.shade600),
-                    ),
-                  ],
-                  if (session.isAdmin) ...[
-                    const SizedBox(height: 20),
-                    const Divider(),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _seeding ? null : _seed,
-                        icon: _seeding
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2))
-                            : const Icon(
-                                Icons.person_add_outlined,
-                                size: 18,
-                              ),
-                        label: Text(_seeding
-                            ? 'Adding…'
-                            : 'Add preset accounts'),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'One-time helper: creates the preset staff accounts '
-                      'with default access.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade600),
                     ),
                   ],
                 ],

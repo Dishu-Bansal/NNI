@@ -29,18 +29,6 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
   bool _pending = false;
   bool _saving = false;
 
-  final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  bool _obscure = true;
-  bool _creating = false;
-
-  @override
-  void dispose() {
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
-    super.dispose();
-  }
-
   void _pickUser(AppUser? user) {
     setState(() {
       _selectedUid = user?.uid;
@@ -75,46 +63,18 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
     }
   }
 
-  /// Creates a new login and auto-selects it below so its flags can be
-  /// adjusted immediately.
-  Future<void> _create() async {
-    if (_creating) return;
-    final email = _emailCtrl.text.trim();
-    final password = _passwordCtrl.text;
-    final emailOk =
-        RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
-    if (!emailOk) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid email address')),
-      );
-      return;
-    }
-    if (password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Password must be at least 6 characters')),
-      );
-      return;
-    }
-    setState(() => _creating = true);
-    try {
-      final user =
-          await _service.createAccount(email: email, password: password);
-      _emailCtrl.clear();
-      _passwordCtrl.clear();
-      _pickUser(user);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Account created for ${user.email}')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(friendlyAuthError(e))),
-      );
-    } finally {
-      if (mounted) setState(() => _creating = false);
-    }
+  /// Opens the create-account popup and auto-selects the new login below
+  /// so its flags can be adjusted immediately.
+  Future<void> _openCreate() async {
+    final user = await showDialog<AppUser>(
+      context: context,
+      builder: (_) => const _CreateAccountDialog(),
+    );
+    if (user == null || !mounted) return;
+    _pickUser(user);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Account created for ${user.email}')),
+    );
   }
 
   @override
@@ -137,6 +97,15 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
           appBar: AppBar(
             title: const Text('Access Management',
                 style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: _openCreate,
+            backgroundColor: const Color(0xFF1A3C6E),
+            icon: const Icon(Icons.person_add_outlined,
+                color: Colors.white),
+            label: const Text('Create account',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
           ),
           body: StreamBuilder<List<AppUser>>(
             stream: _usersStream,
@@ -165,74 +134,6 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  const Text('Create account',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 13)),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Column(children: [
-                      TextFormField(
-                        controller: _emailCtrl,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'New user email',
-                          prefixIcon: Icon(Icons.email_outlined),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _passwordCtrl,
-                        obscureText: _obscure,
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _create(),
-                        decoration: InputDecoration(
-                          labelText: 'Temporary password (min 6 chars)',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          suffixIcon: IconButton(
-                            icon: Icon(_obscure
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined),
-                            onPressed: () =>
-                                setState(() => _obscure = !_obscure),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton.icon(
-                          onPressed: _creating ? null : _create,
-                          icon: _creating
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white))
-                              : const Icon(Icons.person_add_outlined,
-                                  size: 18),
-                          label: Text(
-                              _creating ? 'Creating…' : 'Create account',
-                              style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600)),
-                        ),
-                      ),
-                    ]),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text('Manage access',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 13)),
-                  const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
                     initialValue: _selectedUid,
                     decoration: const InputDecoration(
@@ -326,6 +227,115 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
           ),
         ),
       ]),
+    );
+  }
+}
+
+/// Popup for creating a new email/password login. Returns the created
+/// [AppUser] on success, null when dismissed.
+class _CreateAccountDialog extends StatefulWidget {
+  const _CreateAccountDialog();
+
+  @override
+  State<_CreateAccountDialog> createState() => _CreateAccountDialogState();
+}
+
+class _CreateAccountDialogState extends State<_CreateAccountDialog> {
+  final _service = SessionService();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  bool _obscure = true;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _create() async {
+    if (_busy) return;
+    final email = _emailCtrl.text.trim();
+    final password = _passwordCtrl.text;
+    final emailOk =
+        RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+    if (!emailOk || password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(!emailOk
+                ? 'Enter a valid email address'
+                : 'Password must be at least 6 characters')),
+      );
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final user =
+          await _service.createAccount(email: email, password: password);
+      if (!mounted) return;
+      Navigator.pop(context, user);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(friendlyAuthError(e))),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      title: const Text('Create account'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextFormField(
+            controller: _emailCtrl,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'New user email',
+              prefixIcon: Icon(Icons.email_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _passwordCtrl,
+            obscureText: _obscure,
+            textInputAction: TextInputAction.done,
+            onFieldSubmitted: (_) => _create(),
+            decoration: InputDecoration(
+              labelText: 'Temporary password (min 6 chars)',
+              prefixIcon: const Icon(Icons.lock_outline),
+              suffixIcon: IconButton(
+                icon: Icon(_obscure
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined),
+                onPressed: () => setState(() => _obscure = !_obscure),
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+            onPressed: _busy ? null : () => Navigator.pop(context),
+            child: const Text('Cancel')),
+        ElevatedButton(
+          onPressed: _busy ? null : _create,
+          child: _busy
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
+              : const Text('Create'),
+        ),
+      ],
     );
   }
 }

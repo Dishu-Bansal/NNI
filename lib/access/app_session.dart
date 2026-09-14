@@ -42,11 +42,3 @@ class AppUser {
         canViewTotalPending: d['canViewTotalPending'] ?? false,
       );
 }
-
-/// Result of the one-time account seeding helper.
-class SeedResult {
-  final int created;
-  final int skipped;
-
-  const SeedResult({required this.created, required this.skipped});
-}

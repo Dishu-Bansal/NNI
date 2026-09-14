@@ -134,50 +134,6 @@ class SessionService {
     });
   }
 
-  /// Preset staff accounts for the one-time Home helper. Docs are keyed by
-  /// email; on first login their flags move into the real `uid` doc.
-  static const List<String> seedEmails = [
-    'reetugora123@gmail.com',
-    'gitalamba@123gmail.com',
-    'ramesh2001sharma123@gmail.com',
-    'manpreeetmatharu97@gmail.com',
-    'mlsharma.shimla94@gmail.com',
-  ];
-
-  /// Creates `users` docs with default flags for preset emails that have no
-  /// account doc yet (matched by email). Safe to run repeatedly: existing
-  /// accounts are skipped, never overwritten.
-  Future<SeedResult> seedAccounts() async {
-    final by = FirebaseAuth.instance.currentUser?.email ?? '';
-    var created = 0;
-    var skipped = 0;
-    for (final raw in seedEmails) {
-      final email = raw.trim().toLowerCase();
-      final existing = await _db
-          .collection(_collection)
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (existing.docs.isNotEmpty) {
-        skipped++;
-        continue;
-      }
-      final now = DateTime.now().toIso8601String();
-      await _db.collection(_collection).doc(email).set({
-        'email': email,
-        'canAccessStudents': _defaultStudents,
-        'canAccessFees': _defaultFees,
-        'canViewTotalPending': _defaultPending,
-        'preProvisioned': true,
-        'createdAt': now,
-        'updatedAt': now,
-        'updatedBy': by,
-      });
-      created++;
-    }
-    return SeedResult(created: created, skipped: skipped);
-  }
-
   /// Creates a new email/password login for a staff member (admin only by
   /// policy) and returns its access row. The account is created through a
   /// secondary Firebase app so the admin stays signed in. Flags pre-set
