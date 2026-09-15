@@ -494,13 +494,34 @@ class _StudentsTabState extends State<_StudentsTab> {
                                               ),
                                               Expanded(
                                                 flex: 3,
-                                                child: Text(s.name,
-                                                    overflow: TextOverflow
-                                                        .ellipsis,
-                                                    style: const TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                        fontSize: 14)),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment
+                                                          .start,
+                                                  children: [
+                                                    Text(s.name,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        maxLines: 1,
+                                                        style: const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w700,
+                                                            fontSize: 14)),
+                                                    if (s.fathersName
+                                                        .isNotEmpty)
+                                                      Text(
+                                                        'Father: ${s.fathersName}',
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        maxLines: 1,
+                                                        style: TextStyle(
+                                                            fontSize: 11,
+                                                            color: Colors
+                                                                .grey.shade600),
+                                                      ),
+                                                  ],
+                                                ),
                                               ),
                                               Expanded(
                                                 flex: 1,
@@ -666,8 +687,17 @@ class _StudentCard extends StatelessWidget {
                   children: [
                     Text(student.name,
                         overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                         style: const TextStyle(
                             fontWeight: FontWeight.w700, fontSize: 14)),
+                    if (student.fathersName.isNotEmpty)
+                      Text(
+                        'Father: ${student.fathersName}',
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade600),
+                      ),
                     const SizedBox(height: 2),
                     Text(
                       '${student.course} • ${student.college} • '
