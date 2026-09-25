@@ -86,12 +86,24 @@ class _FeesManagementScreenState extends State<FeesManagementScreen>
   }
 
   Widget _content(bool canViewTotalPending) {
+    // Same breakpoint as the table/card switch: on mobile the FAB would
+    // cover the pagination arrows, so Add moves into the top bar.
+    final isNarrow = MediaQuery.of(context).size.width < 600;
+    final showAdd = _tabs.index <= 1;
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
       drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Fees Management',
             style: TextStyle(fontWeight: FontWeight.w700)),
+        actions: [
+          if (isNarrow && showAdd)
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'Add Receipt',
+              onPressed: _openReceiptForm,
+            ),
+        ],
         bottom: TabBar(
           controller: _tabs,
           indicatorColor: Colors.amber,
@@ -119,7 +131,7 @@ class _FeesManagementScreenState extends State<FeesManagementScreen>
           _LogsTab(service: _feesService),
         ],
       ),
-      floatingActionButton: _tabs.index <= 1
+      floatingActionButton: !isNarrow && showAdd
           ? FloatingActionButton.extended(
               onPressed: _openReceiptForm,
               backgroundColor: const Color(0xFF1A3C6E),
