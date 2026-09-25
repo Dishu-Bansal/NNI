@@ -119,12 +119,24 @@ class _StudentListScreenState extends State<StudentListScreen>
   }
 
   Widget _content() {
+    // Same breakpoint as the table/card switch: on mobile the FAB would
+    // cover the pagination arrows, so Add moves into the top bar.
+    final isNarrow = MediaQuery.of(context).size.width < 600;
+    final showAdd = _tabs.index == 0;
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
       drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Student Management',
             style: TextStyle(fontWeight: FontWeight.w700)),
+        actions: [
+          if (isNarrow && showAdd)
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'Add Student',
+              onPressed: () => _openForm(),
+            ),
+        ],
         bottom: TabBar(
           controller: _tabs,
           indicatorColor: Colors.amber,
@@ -148,7 +160,7 @@ class _StudentListScreenState extends State<StudentListScreen>
           _LogsTab(service: _service),
         ],
       ),
-      floatingActionButton: _tabs.index == 0
+      floatingActionButton: !isNarrow && showAdd
           ? FloatingActionButton.extended(
               onPressed: () => _openForm(),
               backgroundColor: const Color(0xFF1A3C6E),
