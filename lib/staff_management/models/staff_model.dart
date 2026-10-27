@@ -184,6 +184,33 @@ class StaffModel {
   StaffGroup get resolvedGroup =>
       staffGroupOfStored(group, byCourse: course);
 
+  /// Base salary plus every increment effective up to today (undated
+  /// increments count as effective now; future-dated ones are excluded).
+  double get currentSalary {
+    var total = double.tryParse(salary.trim()) ?? 0;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    for (final inc in increments) {
+      final d = inc.date;
+      if (d != null && DateTime(d.year, d.month, d.day).isAfter(today)) {
+        continue;
+      }
+      total += double.tryParse(inc.amount.trim()) ?? 0;
+    }
+    return total;
+  }
+
+  bool get hasSalaryInfo =>
+      salary.trim().isNotEmpty ||
+      increments.any((e) => e.amount.trim().isNotEmpty);
+
+  String get currentSalaryLabel {
+    final v = currentSalary;
+    return v == v.roundToDouble()
+        ? '₹${v.toStringAsFixed(0)}'
+        : '₹${v.toStringAsFixed(2)}';
+  }
+
   StaffModel clone() => StaffModel(
         id: id,
         name: name,

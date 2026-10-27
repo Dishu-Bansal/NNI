@@ -112,12 +112,15 @@ class _StaffListScreenState extends State<StaffListScreen>
           return noAccessScaffold(
               module: 'Staff Management', drawer: const AppDrawer());
         }
-        return _content(canEdit: session.canViewStaffSalary);
+        return _content(
+          canEdit: session.canViewStaffSalary,
+          showSalary: session.canViewStaffSalary,
+        );
       },
     );
   }
 
-  Widget _content({required bool canEdit}) {
+  Widget _content({required bool canEdit, required bool showSalary}) {
     final isNarrow = MediaQuery.of(context).size.width < 600;
     final showAdd = _tabs.index == 0;
     return Scaffold(
@@ -151,6 +154,7 @@ class _StaffListScreenState extends State<StaffListScreen>
           _StaffTab(
             service: _service,
             canEdit: canEdit,
+            showSalary: showSalary,
             onAdd: () => _openForm(),
             onEdit: _openForm,
             onDelete: _delete,
@@ -178,6 +182,7 @@ class _StaffListScreenState extends State<StaffListScreen>
 class _StaffTab extends StatefulWidget {
   final FirebaseStaffService service;
   final bool canEdit;
+  final bool showSalary;
   final VoidCallback onAdd;
   final void Function(StaffModel?) onEdit;
   final void Function(StaffModel) onDelete;
@@ -186,6 +191,7 @@ class _StaffTab extends StatefulWidget {
   const _StaffTab({
     required this.service,
     required this.canEdit,
+    required this.showSalary,
     required this.onAdd,
     required this.onEdit,
     required this.onDelete,
@@ -254,6 +260,9 @@ class _StaffTabState extends State<_StaffTab> {
           break;
         case 2:
           cmp = a.course.compareTo(b.course);
+          break;
+        case 4:
+          cmp = a.resolvedGroup.index.compareTo(b.resolvedGroup.index);
           break;
         case 3:
           final ad = a.dateOfJoining;
@@ -419,6 +428,7 @@ class _StaffTabState extends State<_StaffTab> {
                                   itemBuilder: (_, i) => _StaffCard(
                                     staff: slice[i],
                                     canEdit: widget.canEdit,
+                                    showSalary: widget.showSalary,
                                     serial: start + i + 1,
                                     onOpen: () => widget.onOpen(slice[i]),
                                     onEdit: () => widget.onEdit(slice[i]),
@@ -430,6 +440,7 @@ class _StaffTabState extends State<_StaffTab> {
                               : _StaffTable(
                                   staff: slice,
                                   canEdit: widget.canEdit,
+                                  showSalary: widget.showSalary,
                                   serialBase: start,
                                   sortColumnIndex: _sortCol,
                                   sortAscending: _sortAsc,
@@ -503,6 +514,7 @@ class _StaffTabState extends State<_StaffTab> {
 class _StaffTable extends StatelessWidget {
   final List<StaffModel> staff;
   final bool canEdit;
+  final bool showSalary;
   final int serialBase;
   final int sortColumnIndex;
   final bool sortAscending;
@@ -515,6 +527,7 @@ class _StaffTable extends StatelessWidget {
   const _StaffTable({
     required this.staff,
     required this.canEdit,
+    required this.showSalary,
     required this.serialBase,
     required this.sortColumnIndex,
     required this.sortAscending,
@@ -537,6 +550,7 @@ class _StaffTable extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(children: [
         _TableHeader(
+          showSalary: showSalary,
           sortColumnIndex: sortColumnIndex,
           sortAscending: sortAscending,
           onSort: onSort,
@@ -550,6 +564,7 @@ class _StaffTable extends StatelessWidget {
             itemBuilder: (_, i) => _TableRow(
               staff: staff[i],
               canEdit: canEdit,
+              showSalary: showSalary,
               isEven: i.isEven,
               serial: serialBase + i + 1,
               initial: initialOf(staff[i].name),
@@ -565,11 +580,13 @@ class _StaffTable extends StatelessWidget {
 }
 
 class _TableHeader extends StatelessWidget {
+  final bool showSalary;
   final int sortColumnIndex;
   final bool sortAscending;
   final void Function(int) onSort;
 
   const _TableHeader({
+    required this.showSalary,
     required this.sortColumnIndex,
     required this.sortAscending,
     required this.onSort,
@@ -581,7 +598,6 @@ class _TableHeader extends StatelessWidget {
       color: const Color(0xFF1A3C6E).withValues(alpha: 0.07),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(children: [
-        _HeaderCell('Name', 4, 0, sortColumnIndex, sortAscending, onSort),
         const Expanded(
           flex: 1,
           child: Text('S.No',
@@ -590,12 +606,31 @@ class _TableHeader extends StatelessWidget {
                   color: Color(0xFF1A3C6E),
                   fontSize: 13)),
         ),
+        _HeaderCell('Name', 3, 0, sortColumnIndex, sortAscending, onSort),
+        _HeaderCell('Group', 2, 4, sortColumnIndex, sortAscending, onSort),
         _HeaderCell('Designation', 2, 1, sortColumnIndex, sortAscending,
             onSort),
+        if (showSalary)
+          const Expanded(
+            flex: 2,
+            child: Text('Salary',
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A3C6E),
+                    fontSize: 13)),
+          ),
         _HeaderCell(
             'Course', 2, 2, sortColumnIndex, sortAscending, onSort),
         _HeaderCell(
             'Joined', 2, 3, sortColumnIndex, sortAscending, onSort),
+        const Expanded(
+          flex: 2,
+          child: Text('Relieved',
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A3C6E),
+                  fontSize: 13)),
+        ),
         const Expanded(
           flex: 1,
           child: Text('Actions',
@@ -647,6 +682,7 @@ class _HeaderCell extends StatelessWidget {
 class _TableRow extends StatelessWidget {
   final StaffModel staff;
   final bool canEdit;
+  final bool showSalary;
   final bool isEven;
   final int serial;
   final String initial;
@@ -657,6 +693,7 @@ class _TableRow extends StatelessWidget {
   const _TableRow({
     required this.staff,
     required this.canEdit,
+    required this.showSalary,
     required this.isEven,
     required this.serial,
     required this.initial,
@@ -664,6 +701,11 @@ class _TableRow extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
   });
+
+  static String _fmtDate(DateTime? d) => d == null
+      ? '—'
+      : '${d.day.toString().padLeft(2, '0')}/'
+          '${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   @override
   Widget build(BuildContext context) {
@@ -681,7 +723,7 @@ class _TableRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            flex: 4,
+            flex: 3,
             child: Row(children: [
               ClipOval(child: _avatar(initial, 28)),
               const SizedBox(width: 10),
@@ -695,8 +737,7 @@ class _TableRow extends StatelessWidget {
                         style: const TextStyle(
                             fontWeight: FontWeight.w700, fontSize: 14)),
                     Text(
-                      '${staff.resolvedGroup.label}'
-                      '${staff.course.isNotEmpty ? ' • ${staff.course}' : ''}',
+                      staff.course.isEmpty ? '—' : staff.course,
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                       style: TextStyle(
@@ -710,11 +751,33 @@ class _TableRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
+              staff.resolvedGroup.label,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
               staff.designation.isEmpty ? '—' : staff.designation,
               style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          if (showSalary)
+            Expanded(
+              flex: 2,
+              child: Text(
+                staff.hasSalaryInfo ? staff.currentSalaryLabel : '—',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: staff.hasSalaryInfo
+                        ? const Color(0xFF2E7D32)
+                        : Colors.grey.shade800),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           Expanded(
             flex: 2,
             child: Text(
@@ -726,12 +789,22 @@ class _TableRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              staff.dateOfJoining == null
-                  ? '—'
-                  : '${staff.dateOfJoining!.day.toString().padLeft(2, '0')}/'
-                      '${staff.dateOfJoining!.month.toString().padLeft(2, '0')}/'
-                      '${staff.dateOfJoining!.year}',
+              _fmtDate(staff.dateOfJoining),
               style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              _fmtDate(staff.dateOfRelieving),
+              style: TextStyle(
+                  fontSize: 13,
+                  color: staff.dateOfRelieving == null
+                      ? Colors.grey.shade800
+                      : Colors.red.shade700,
+                  fontWeight: staff.dateOfRelieving == null
+                      ? FontWeight.normal
+                      : FontWeight.w700),
             ),
           ),
           Expanded(
@@ -779,6 +852,7 @@ class _TableRow extends StatelessWidget {
 class _StaffCard extends StatelessWidget {
   final StaffModel staff;
   final bool canEdit;
+  final bool showSalary;
   final int serial;
   final VoidCallback onOpen;
   final VoidCallback onEdit;
@@ -788,12 +862,18 @@ class _StaffCard extends StatelessWidget {
   const _StaffCard({
     required this.staff,
     required this.canEdit,
+    required this.showSalary,
     required this.serial,
     required this.onOpen,
     required this.onEdit,
     required this.onDelete,
     required this.initial,
   });
+
+  static String _fmtDate(DateTime? d) => d == null
+      ? ''
+      : '${d.day.toString().padLeft(2, '0')}/'
+          '${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   @override
   Widget build(BuildContext context) {
@@ -838,10 +918,21 @@ class _StaffCard extends StatelessWidget {
                   Text(
                     '${staff.designation.isNotEmpty ? '${staff.designation}  •  ' : ''}'
                     'S.No $serial  •  '
-                    '${staff.mobileNo1.isNotEmpty ? staff.mobileNo1 : 'No mobile'}',
+                    '${staff.mobileNo1.isNotEmpty ? staff.mobileNo1 : 'No mobile'}'
+                    '${staff.dateOfRelieving != null ? '  •  Relieved ${_fmtDate(staff.dateOfRelieving)}' : ''}',
                     style: TextStyle(
                         fontSize: 11, color: Colors.grey.shade600),
                   ),
+                  if (showSalary && staff.hasSalaryInfo) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      'Current Salary: ${staff.currentSalaryLabel}',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF2E7D32)),
+                    ),
+                  ],
                 ],
               ),
             ),

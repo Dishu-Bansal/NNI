@@ -237,27 +237,6 @@ class _HeaderCard extends StatelessWidget {
 
   const _HeaderCard({required this.staff, required this.canViewSalary});
 
-  /// Base salary plus every increment effective up to today (undated
-  /// increments count as effective now; future-dated ones are excluded).
-  double _currentSalary() {
-    var total = double.tryParse(staff.salary.trim()) ?? 0;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    for (final inc in staff.increments) {
-      final d = inc.date;
-      if (d != null &&
-          DateTime(d.year, d.month, d.day).isAfter(today)) {
-        continue;
-      }
-      total += double.tryParse(inc.amount.trim()) ?? 0;
-    }
-    return total;
-  }
-
-  String _money(double v) => v == v.roundToDouble()
-      ? '₹${v.toStringAsFixed(0)}'
-      : '₹${v.toStringAsFixed(2)}';
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -304,10 +283,7 @@ class _HeaderCard extends StatelessWidget {
                         fontSize: 12, color: Colors.grey.shade600),
                   ),
                 ],
-                if (canViewSalary &&
-                    (staff.salary.trim().isNotEmpty ||
-                        staff.increments.any(
-                            (e) => e.amount.trim().isNotEmpty))) ...[
+                if (canViewSalary && staff.hasSalaryInfo) ...[
                   const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -321,7 +297,7 @@ class _HeaderCard extends StatelessWidget {
                               .withValues(alpha: 0.3)),
                     ),
                     child: Text(
-                      'Current Salary: ${_money(_currentSalary())}',
+                      'Current Salary: ${staff.currentSalaryLabel}',
                       style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
