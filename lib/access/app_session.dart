@@ -1,3 +1,14 @@
+/// Accounts that may view staff salary by default. Everyone else defaults
+/// to disallowed (an admin can still override per account from Access
+/// Management). Compared case-insensitively.
+const List<String> salaryDefaultAllowEmails = [
+  'dishu1bansal@gmail.com',
+  'dishubansal81@gmail.com',
+];
+
+bool isSalaryDefaultAllowEmail(String? email) =>
+    salaryDefaultAllowEmails.contains((email ?? '').trim().toLowerCase());
+
 /// Access state for the signed-in user, resolved live from the `users`
 /// Firestore collection (plus the hardcoded admin list).
 class AppSession {
@@ -6,6 +17,8 @@ class AppSession {
   final bool isAdmin;
   final bool canAccessStudents;
   final bool canAccessFees;
+  final bool canAccessStaff;
+  final bool canViewStaffSalary;
   final bool canViewTotalPending;
 
   const AppSession({
@@ -14,6 +27,8 @@ class AppSession {
     required this.isAdmin,
     required this.canAccessStudents,
     required this.canAccessFees,
+    required this.canAccessStaff,
+    required this.canViewStaffSalary,
     required this.canViewTotalPending,
   });
 }
@@ -24,6 +39,8 @@ class AppUser {
   final String email;
   final bool canAccessStudents;
   final bool canAccessFees;
+  final bool canAccessStaff;
+  final bool canViewStaffSalary;
   final bool canViewTotalPending;
 
   const AppUser({
@@ -31,14 +48,22 @@ class AppUser {
     required this.email,
     required this.canAccessStudents,
     required this.canAccessFees,
+    required this.canAccessStaff,
+    required this.canViewStaffSalary,
     required this.canViewTotalPending,
   });
 
-  factory AppUser.fromDoc(String uid, Map<String, dynamic> d) => AppUser(
-        uid: uid,
-        email: (d['email'] ?? '').toString(),
-        canAccessStudents: d['canAccessStudents'] ?? true,
-        canAccessFees: d['canAccessFees'] ?? true,
-        canViewTotalPending: d['canViewTotalPending'] ?? false,
-      );
+  factory AppUser.fromDoc(String uid, Map<String, dynamic> d) {
+    final email = (d['email'] ?? '').toString();
+    return AppUser(
+      uid: uid,
+      email: email,
+      canAccessStudents: d['canAccessStudents'] ?? true,
+      canAccessFees: d['canAccessFees'] ?? true,
+      canAccessStaff: d['canAccessStaff'] ?? true,
+      canViewStaffSalary:
+          d['canViewStaffSalary'] as bool? ?? isSalaryDefaultAllowEmail(email),
+      canViewTotalPending: d['canViewTotalPending'] ?? false,
+    );
+  }
 }

@@ -24,10 +24,13 @@ class SessionService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   static const _collection = 'users';
 
-  /// Defaults for brand-new accounts: student + fees modules allowed,
-  /// total pending fees hidden.
+  /// Defaults for brand-new accounts: student + fees + staff modules
+  /// allowed, staff salary and total pending fees hidden (except the
+  /// salary-exception accounts in [isSalaryDefaultAllowEmail]).
   static const bool _defaultStudents = true;
   static const bool _defaultFees = true;
+  static const bool _defaultStaff = true;
+  static const bool _defaultSalary = false;
   static const bool _defaultPending = false;
 
   /// Live session for the signed-in user (null when signed out).
@@ -42,6 +45,8 @@ class SessionService {
           isAdmin: true,
           canAccessStudents: true,
           canAccessFees: true,
+          canAccessStaff: true,
+          canViewStaffSalary: true,
           canViewTotalPending: true,
         ));
       }
@@ -56,6 +61,8 @@ class SessionService {
           // otherwise fall back to the defaults.
           var students = _defaultStudents;
           var fees = _defaultFees;
+          var staff = _defaultStaff;
+          var salary = isSalaryDefaultAllowEmail(email) ? true : _defaultSalary;
           var pending = _defaultPending;
           String? seedDocId;
           final seed = await _db
@@ -67,6 +74,8 @@ class SessionService {
             final s = seed.docs.first.data();
             students = s['canAccessStudents'] as bool? ?? students;
             fees = s['canAccessFees'] as bool? ?? fees;
+            staff = s['canAccessStaff'] as bool? ?? staff;
+            salary = s['canViewStaffSalary'] as bool? ?? salary;
             pending = s['canViewTotalPending'] as bool? ?? pending;
             seedDocId = seed.docs.first.id;
           }
@@ -75,6 +84,8 @@ class SessionService {
             'email': email,
             'canAccessStudents': students,
             'canAccessFees': fees,
+            'canAccessStaff': staff,
+            'canViewStaffSalary': salary,
             'canViewTotalPending': pending,
             'createdAt': now,
             'updatedAt': now,
@@ -91,6 +102,8 @@ class SessionService {
             isAdmin: false,
             canAccessStudents: students,
             canAccessFees: fees,
+            canAccessStaff: staff,
+            canViewStaffSalary: salary,
             canViewTotalPending: pending,
           );
         }
@@ -101,6 +114,9 @@ class SessionService {
           isAdmin: false,
           canAccessStudents: d['canAccessStudents'] ?? _defaultStudents,
           canAccessFees: d['canAccessFees'] ?? _defaultFees,
+          canAccessStaff: d['canAccessStaff'] ?? _defaultStaff,
+          canViewStaffSalary: d['canViewStaffSalary'] as bool? ??
+              (isSalaryDefaultAllowEmail(email) ? true : _defaultSalary),
           canViewTotalPending: d['canViewTotalPending'] ?? _defaultPending,
         );
       });
@@ -117,17 +133,21 @@ class SessionService {
             snap.docs.map((d) => AppUser.fromDoc(d.id, d.data())).toList());
   }
 
-  /// Persists the three access flags for one account (admin only by policy).
+  /// Persists the access flags for one account (admin only by policy).
   Future<void> updatePermissions({
     required String uid,
     required bool students,
     required bool fees,
+    required bool staff,
+    required bool salary,
     required bool pending,
   }) {
     final by = FirebaseAuth.instance.currentUser?.email ?? '';
     return _db.collection(_collection).doc(uid).update({
       'canAccessStudents': students,
       'canAccessFees': fees,
+      'canAccessStaff': staff,
+      'canViewStaffSalary': salary,
       'canViewTotalPending': pending,
       'updatedAt': DateTime.now().toIso8601String(),
       'updatedBy': by,
@@ -162,6 +182,9 @@ class SessionService {
       final uid = cred.user!.uid;
       var students = _defaultStudents;
       var fees = _defaultFees;
+      var staff = _defaultStaff;
+      var salary =
+          isSalaryDefaultAllowEmail(normalized) ? true : _defaultSalary;
       var pending = _defaultPending;
       String? seedDocId;
       final seed = await _db
@@ -173,6 +196,8 @@ class SessionService {
         final s = seed.docs.first.data();
         students = s['canAccessStudents'] as bool? ?? students;
         fees = s['canAccessFees'] as bool? ?? fees;
+        staff = s['canAccessStaff'] as bool? ?? staff;
+        salary = s['canViewStaffSalary'] as bool? ?? salary;
         pending = s['canViewTotalPending'] as bool? ?? pending;
         seedDocId = seed.docs.first.id;
       }
@@ -181,6 +206,8 @@ class SessionService {
         'email': normalized,
         'canAccessStudents': students,
         'canAccessFees': fees,
+        'canAccessStaff': staff,
+        'canViewStaffSalary': salary,
         'canViewTotalPending': pending,
         'createdAt': now,
         'updatedAt': now,
@@ -194,6 +221,8 @@ class SessionService {
         email: normalized,
         canAccessStudents: students,
         canAccessFees: fees,
+        canAccessStaff: staff,
+        canViewStaffSalary: salary,
         canViewTotalPending: pending,
       );
     } finally {

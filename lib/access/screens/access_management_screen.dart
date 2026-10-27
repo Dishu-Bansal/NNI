@@ -26,6 +26,8 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
   String? _selectedUid;
   bool _students = true;
   bool _fees = true;
+  bool _staff = true;
+  bool _salary = true;
   bool _pending = false;
   bool _saving = false;
 
@@ -34,6 +36,8 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
       _selectedUid = user?.uid;
       _students = user?.canAccessStudents ?? true;
       _fees = user?.canAccessFees ?? true;
+      _staff = user?.canAccessStaff ?? true;
+      _salary = user?.canViewStaffSalary ?? true;
       _pending = user?.canViewTotalPending ?? false;
     });
   }
@@ -47,6 +51,8 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
         uid: uid,
         students: _students,
         fees: _fees,
+        staff: _staff,
+        salary: _salary,
         pending: _pending,
       );
       if (!mounted) return;
@@ -176,6 +182,12 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
                     const SizedBox(height: 12),
                     _accessRow('Access Fees Management', _fees,
                         (v) => setState(() => _fees = v)),
+                    const SizedBox(height: 12),
+                    _accessRow('Access Staff Management', _staff,
+                        (v) => setState(() => _staff = v)),
+                    const SizedBox(height: 12),
+                    _accessRow('View Staff Salary', _salary,
+                        (v) => setState(() => _salary = v)),
                     const SizedBox(height: 12),
                     _accessRow('View Total Pending Fees', _pending,
                         (v) => setState(() => _pending = v)),
