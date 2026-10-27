@@ -1044,10 +1044,7 @@ class _StaffFormScreenState extends State<StaffFormScreen> {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],
-              decoration: const InputDecoration(labelText: 'Salary *'),
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'Salary is required'
-                  : null,
+              decoration: const InputDecoration(labelText: 'Salary (optional)'),
             ),
           if (_canViewSalary) const SizedBox(height: 10),
           TextFormField(

@@ -111,7 +111,7 @@ class _DetailsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _HeaderCard(staff: staff),
+        _HeaderCard(staff: staff, canViewSalary: canViewSalary),
         const SizedBox(height: 12),
         _DetailCard(
           title: 'Personal Information',
@@ -233,8 +233,30 @@ class _Field {
 
 class _HeaderCard extends StatelessWidget {
   final StaffModel staff;
+  final bool canViewSalary;
 
-  const _HeaderCard({required this.staff});
+  const _HeaderCard({required this.staff, required this.canViewSalary});
+
+  /// Base salary plus every increment effective up to today (undated
+  /// increments count as effective now; future-dated ones are excluded).
+  double _currentSalary() {
+    var total = double.tryParse(staff.salary.trim()) ?? 0;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    for (final inc in staff.increments) {
+      final d = inc.date;
+      if (d != null &&
+          DateTime(d.year, d.month, d.day).isAfter(today)) {
+        continue;
+      }
+      total += double.tryParse(inc.amount.trim()) ?? 0;
+    }
+    return total;
+  }
+
+  String _money(double v) => v == v.roundToDouble()
+      ? '₹${v.toStringAsFixed(0)}'
+      : '₹${v.toStringAsFixed(2)}';
 
   @override
   Widget build(BuildContext context) {
@@ -280,6 +302,31 @@ class _HeaderCard extends StatelessWidget {
                     '${staff.designation}${staff.designation.isNotEmpty && staff.staffId.isNotEmpty ? ' • ' : ''}${staff.staffId.isNotEmpty ? 'ID ${staff.staffId}' : ''}',
                     style: TextStyle(
                         fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
+                if (canViewSalary &&
+                    (staff.salary.trim().isNotEmpty ||
+                        staff.increments.any(
+                            (e) => e.amount.trim().isNotEmpty))) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color:
+                          const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: const Color(0xFF2E7D32)
+                              .withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      'Current Salary: ${_money(_currentSalary())}',
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF2E7D32)),
+                    ),
                   ),
                 ],
               ],

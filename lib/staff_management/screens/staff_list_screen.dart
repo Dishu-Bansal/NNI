@@ -235,7 +235,7 @@ class _StaffTabState extends State<_StaffTab> {
     final list = all.where((s) {
       if (q.isNotEmpty) {
         final hay =
-            '${s.name} ${s.fatherName} ${s.staffId} ${s.mobileNo1}'.toLowerCase();
+            '${s.name} ${s.fatherName} ${s.mobileNo1}'.toLowerCase();
         if (!hay.contains(q)) return false;
       }
       if (_groupFilter != null && s.resolvedGroup != _groupFilter) {
@@ -319,7 +319,7 @@ class _StaffTabState extends State<_StaffTab> {
                 controller: _searchCtrl,
                 onChanged: (_) => setState(() => _page = 1),
                 decoration: InputDecoration(
-                  hintText: 'Search by name, staff ID, mobile',
+                  hintText: 'Search by name or mobile',
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _searchCtrl.text.isNotEmpty
                       ? IconButton(
@@ -419,6 +419,7 @@ class _StaffTabState extends State<_StaffTab> {
                                   itemBuilder: (_, i) => _StaffCard(
                                     staff: slice[i],
                                     canEdit: widget.canEdit,
+                                    serial: start + i + 1,
                                     onOpen: () => widget.onOpen(slice[i]),
                                     onEdit: () => widget.onEdit(slice[i]),
                                     onDelete: () =>
@@ -429,6 +430,7 @@ class _StaffTabState extends State<_StaffTab> {
                               : _StaffTable(
                                   staff: slice,
                                   canEdit: widget.canEdit,
+                                  serialBase: start,
                                   sortColumnIndex: _sortCol,
                                   sortAscending: _sortAsc,
                                   onSort: _onSort,
@@ -501,6 +503,7 @@ class _StaffTabState extends State<_StaffTab> {
 class _StaffTable extends StatelessWidget {
   final List<StaffModel> staff;
   final bool canEdit;
+  final int serialBase;
   final int sortColumnIndex;
   final bool sortAscending;
   final void Function(int) onSort;
@@ -512,6 +515,7 @@ class _StaffTable extends StatelessWidget {
   const _StaffTable({
     required this.staff,
     required this.canEdit,
+    required this.serialBase,
     required this.sortColumnIndex,
     required this.sortAscending,
     required this.onSort,
@@ -547,6 +551,7 @@ class _StaffTable extends StatelessWidget {
               staff: staff[i],
               canEdit: canEdit,
               isEven: i.isEven,
+              serial: serialBase + i + 1,
               initial: initialOf(staff[i].name),
               onOpen: () => onOpen(staff[i]),
               onEdit: () => onEdit(staff[i]),
@@ -579,7 +584,7 @@ class _TableHeader extends StatelessWidget {
         _HeaderCell('Name', 4, 0, sortColumnIndex, sortAscending, onSort),
         const Expanded(
           flex: 1,
-          child: Text('Staff ID',
+          child: Text('S.No',
               style: TextStyle(
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF1A3C6E),
@@ -643,6 +648,7 @@ class _TableRow extends StatelessWidget {
   final StaffModel staff;
   final bool canEdit;
   final bool isEven;
+  final int serial;
   final String initial;
   final VoidCallback onOpen;
   final VoidCallback onEdit;
@@ -652,6 +658,7 @@ class _TableRow extends StatelessWidget {
     required this.staff,
     required this.canEdit,
     required this.isEven,
+    required this.serial,
     required this.initial,
     required this.onOpen,
     required this.onEdit,
@@ -666,6 +673,13 @@ class _TableRow extends StatelessWidget {
         color: isEven ? Colors.white : Colors.grey.shade50,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(children: [
+          Expanded(
+            flex: 1,
+            child: Text(
+              '$serial',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+            ),
+          ),
           Expanded(
             flex: 4,
             child: Row(children: [
@@ -692,14 +706,6 @@ class _TableRow extends StatelessWidget {
                 ),
               ),
             ]),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              staff.staffId.isEmpty ? '—' : staff.staffId,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
-              overflow: TextOverflow.ellipsis,
-            ),
           ),
           Expanded(
             flex: 2,
@@ -773,6 +779,7 @@ class _TableRow extends StatelessWidget {
 class _StaffCard extends StatelessWidget {
   final StaffModel staff;
   final bool canEdit;
+  final int serial;
   final VoidCallback onOpen;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -781,6 +788,7 @@ class _StaffCard extends StatelessWidget {
   const _StaffCard({
     required this.staff,
     required this.canEdit,
+    required this.serial,
     required this.onOpen,
     required this.onEdit,
     required this.onDelete,
@@ -829,7 +837,7 @@ class _StaffCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     '${staff.designation.isNotEmpty ? '${staff.designation}  •  ' : ''}'
-                    '${staff.staffId.isNotEmpty ? 'ID ${staff.staffId}  •  ' : ''}'
+                    'S.No $serial  •  '
                     '${staff.mobileNo1.isNotEmpty ? staff.mobileNo1 : 'No mobile'}',
                     style: TextStyle(
                         fontSize: 11, color: Colors.grey.shade600),
