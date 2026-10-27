@@ -7,6 +7,7 @@ import '../access/screens/access_management_screen.dart';
 import '../access/session_service.dart';
 import '../fees/screens/fees_management_screen.dart';
 import '../screens/home_screen.dart';
+import '../staff_management/screens/staff_list_screen.dart';
 import '../student_management/screens/student_list_screen.dart';
 
 /// Shared side drawer used by the management screens. Entries follow the
@@ -61,6 +62,7 @@ class _AppDrawerState extends State<AppDrawer> {
         // access themselves, so this only avoids a flashing empty drawer.
         final showStudents = session == null || session.canAccessStudents;
         final showFees = session == null || session.canAccessFees;
+        final showStaff = session == null || session.canAccessStaff;
         return Drawer(
           child: ListView(
             padding: EdgeInsets.zero,
@@ -119,6 +121,16 @@ class _AppDrawerState extends State<AppDrawer> {
                     context,
                     MaterialPageRoute(
                         builder: (_) => const FeesManagementScreen()),
+                  ),
+                ),
+              if (showStaff)
+                ListTile(
+                  leading: const Icon(Icons.badge_outlined),
+                  title: const Text('Staff Management'),
+                  onTap: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const StaffListScreen()),
                   ),
                 ),
               if (session?.isAdmin == true)

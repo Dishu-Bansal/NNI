@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../access/app_session.dart';
 import '../access/session_service.dart';
 import '../fees/screens/fees_management_screen.dart';
+import '../staff_management/screens/staff_list_screen.dart';
 import '../student_management/screens/student_list_screen.dart';
 import '../widgets/app_drawer.dart';
 
@@ -40,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         final showStudents = session.canAccessStudents;
         final showFees = session.canAccessFees;
+        final showStaff = session.canAccessStaff;
         return Scaffold(
           appBar: AppBar(title: const Text('NNI')),
           drawer: const AppDrawer(),
@@ -98,7 +100,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-                  if (!showStudents && !showFees) ...[
+                  if ((showStudents || showFees) && showStaff)
+                    const SizedBox(height: 12),
+                  if (showStaff)
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const StaffListScreen()),
+                        ),
+                        icon: const Icon(Icons.badge_outlined),
+                        label: const Text('Staff Management'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                  if (!showStudents && !showFees && !showStaff) ...[
                     const SizedBox(height: 8),
                     Text(
                       'You currently have no module access.\nPlease contact the admin.',
